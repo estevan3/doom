@@ -834,7 +834,26 @@ PlayerSettings:
   webWasm2023: 1
   webEnableSubmoduleStrippingCompatibility: 0
   webProgressiveAssetLoading: 0
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Android: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    EmbeddedLinux: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    GameCoreScarlett: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    GameCoreXboxOne: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    Kepler: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    LinuxHeadlessSimulation: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    Nintendo Switch: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    Nintendo Switch 2: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    PS4: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    PS5: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    QNX: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    Server: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    Standalone: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    VisionOS: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    WebGL: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    Windows Store Apps: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    XboxOne: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    iPhone: UNITY_MCP_READY;UNITY_MCP_DEPS_3
+    tvOS: UNITY_MCP_READY;UNITY_MCP_DEPS_3
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
@@ -932,14 +951,14 @@ PlayerSettings:
   qnxGraphicConfPath: 
   apiCompatibilityLevel: 6
   captureStartupLogs: {}
-  activeInputHandler: 1
+  activeInputHandler: 2
   windowsGamepadBackendHint: 0
   enableDirectStorage: 0
-  cloudProjectId: 
+  cloudProjectId: 03130dea-c533-42fd-90be-a051d4f9441f
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: 
-  organizationId: 
+  projectName: doom 2026-09-11_17-40-38
+  organizationId: estevandias7
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}
