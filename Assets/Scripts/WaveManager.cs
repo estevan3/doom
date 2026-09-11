@@ -44,8 +44,8 @@ public class WaveManager : MonoBehaviour
 
     void Start()
     {
-        hud = FindObjectOfType<PlayerHUD>();
-        playerController = FindObjectOfType<PlayerController>();
+        hud = FindAnyObjectByType<PlayerHUD>();
+        playerController = FindAnyObjectByType<PlayerController>();
 
         if (playerController != null)
         {
@@ -99,7 +99,7 @@ public class WaveManager : MonoBehaviour
     void FindSpawnPoints()
     {
         List<Transform> points = new List<Transform>();
-        foreach (GameObject obj in FindObjectsOfType<GameObject>())
+        foreach (GameObject obj in FindObjectsByType<GameObject>())
         {
             if (obj.name.Contains("EnemySpawnPoint"))
             {

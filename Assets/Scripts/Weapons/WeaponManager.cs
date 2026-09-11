@@ -8,7 +8,7 @@ public class WeaponManager : MonoBehaviour
 
     void Start()
     {
-        hud = FindObjectOfType<PlayerHUD>();
+        hud = FindAnyObjectByType<PlayerHUD>();
         InitializeWeapons();
         EquipWeapon(0);
     }
@@ -18,7 +18,7 @@ public class WeaponManager : MonoBehaviour
         Camera cam = GetComponent<PlayerController>()?.playerCamera;
         if (cam == null)
         {
-            PlayerController pc = FindObjectOfType<PlayerController>();
+            PlayerController pc = FindAnyObjectByType<PlayerController>();
             if (pc != null) cam = pc.playerCamera;
         }
 
@@ -37,7 +37,7 @@ public class WeaponManager : MonoBehaviour
 
     void Update()
     {
-        if (FindObjectOfType<PlayerController>()?.IsDead() == true) return;
+        if (FindAnyObjectByType<PlayerController>()?.IsDead() == true) return;
 
         var input = PlayerInputActions.Instance;
         if (input == null) return;

@@ -18,8 +18,8 @@ public class PlayerHUD : MonoBehaviour
 
     void Start()
     {
-        playerController = FindObjectOfType<PlayerController>();
-        weaponManager = FindObjectOfType<WeaponManager>();
+        playerController = FindAnyObjectByType<PlayerController>();
+        weaponManager = FindAnyObjectByType<WeaponManager>();
 
         uiFont = LoadFont();
 

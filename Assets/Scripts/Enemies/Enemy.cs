@@ -45,7 +45,7 @@ public abstract class Enemy : MonoBehaviour
         }
         else
         {
-            PlayerController pc = FindObjectOfType<PlayerController>();
+            PlayerController pc = FindAnyObjectByType<PlayerController>();
             if (pc != null) player = pc.transform;
         }
     }
