@@ -74,6 +74,14 @@ public class WaveManager : MonoBehaviour
         col.height = 2f;
         col.radius = 0.5f;
 
+        GameObject tmp = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        tmp.SetActive(false);
+        Mesh capsuleMesh = tmp.GetComponent<MeshFilter>().sharedMesh;
+        Destroy(tmp);
+
+        MeshFilter meshFilter = prefab.AddComponent<MeshFilter>();
+        meshFilter.sharedMesh = capsuleMesh;
+
         MeshRenderer rend = prefab.AddComponent<MeshRenderer>();
         Shader shader = Shader.Find("Standard");
         if (shader == null) shader = Shader.Find("Universal Render Pipeline/Simple Lit");
