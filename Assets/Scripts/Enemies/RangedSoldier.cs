@@ -9,7 +9,7 @@ public class RangedSoldier : Enemy
     private Vector3 strafeDirection;
     private float nextStrafeChange = 0f;
 
-    void Awake()
+    protected override void Awake()
     {
         enemyName = "Ranged Soldier";
         maxHealth = 60;
@@ -18,6 +18,7 @@ public class RangedSoldier : Enemy
         moveSpeed = 3.5f;
         detectionRange = 30f;
         attackRange = 25f;
+        base.Awake();
     }
 
     protected override void Start()

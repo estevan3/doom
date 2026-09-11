@@ -152,7 +152,7 @@ public class PlayerHUD : MonoBehaviour
     Text CreateText(string name, Transform parent, Vector2 position, Vector2 size, int fontSize, Color color, TextAnchor alignment, string text)
     {
         GameObject obj = CreateTextObject(name, parent, position, size);
-        Text t = obj.AddComponent<Text>();
+        Text t = obj.GetComponent<Text>();
         t.fontSize = fontSize;
         t.color = color;
         t.alignment = alignment;

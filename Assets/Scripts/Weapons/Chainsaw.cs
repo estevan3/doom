@@ -6,15 +6,15 @@ public class Chainsaw : Weapon
     public float attackRange = 3f;
     private bool isAttacking = false;
     private CameraShake cameraShake;
-    private WeaponManager weaponManager;
 
-    void Awake()
+    protected override void Awake()
     {
         weaponName = "Chainsaw";
         damage = 30;
         fireRate = 0.1f;
         usesAmmo = false;
         maxAmmo = 0;
+        base.Awake();
     }
 
     public override void Initialize(Camera cam, WeaponManager manager)
@@ -24,7 +24,7 @@ public class Chainsaw : Weapon
         cameraShake = cam.GetComponent<CameraShake>();
     }
 
-    void Update()
+    public override void Update()
     {
         if (weaponManager != null && weaponManager.IsFirePressed() && CanFire())
         {

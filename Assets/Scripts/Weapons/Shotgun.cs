@@ -7,7 +7,7 @@ public class Shotgun : Weapon
     public int pelletDamage = 8;
     private WeaponManager weaponManagerRef;
 
-    void Awake()
+    protected override void Awake()
     {
         weaponName = "Shotgun";
         damage = 64;
@@ -16,6 +16,7 @@ public class Shotgun : Weapon
         usesAmmo = true;
         maxAmmo = 50;
         reloadTime = 2.0f;
+        base.Awake();
     }
 
     public override void Initialize(Camera cam, WeaponManager manager)
@@ -24,7 +25,7 @@ public class Shotgun : Weapon
         weaponManagerRef = manager;
     }
 
-    void Update()
+    public override void Update()
     {
         if (weaponManagerRef != null && weaponManagerRef.IsFirePressed() && CanFire())
         {

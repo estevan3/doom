@@ -27,6 +27,12 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        NavMeshSetup nav = gameObject.GetComponent<NavMeshSetup>();
+        if (nav == null)
+        {
+            nav = gameObject.AddComponent<NavMeshSetup>();
+        }
+
         if (PlayerInputActions.Instance == null)
         {
             GameObject inputObj = new GameObject("PlayerInputActions");

@@ -11,7 +11,7 @@ public class TankBrute : Enemy
     private Renderer enemyRenderer;
     private Color originalColor;
 
-    void Awake()
+    protected override void Awake()
     {
         enemyName = "Tank Brute";
         maxHealth = 200;
@@ -20,6 +20,7 @@ public class TankBrute : Enemy
         moveSpeed = 1.5f;
         detectionRange = 20f;
         attackRange = 3f;
+        base.Awake();
     }
 
     protected override void Start()

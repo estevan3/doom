@@ -3,7 +3,7 @@ using UnityEngine.AI;
 
 public class ZombieRunner : Enemy
 {
-    void Awake()
+    protected override void Awake()
     {
         enemyName = "Zombie Runner";
         maxHealth = 30;
@@ -12,6 +12,7 @@ public class ZombieRunner : Enemy
         moveSpeed = 5f;
         detectionRange = 25f;
         attackRange = 1.8f;
+        base.Awake();
     }
 
     protected override void Start()

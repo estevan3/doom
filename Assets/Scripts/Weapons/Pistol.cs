@@ -4,7 +4,7 @@ public class Pistol : Weapon
 {
     private WeaponManager weaponManagerRef;
 
-    void Awake()
+    protected override void Awake()
     {
         weaponName = "Pistol";
         damage = 15;
@@ -13,6 +13,7 @@ public class Pistol : Weapon
         usesAmmo = true;
         maxAmmo = 999;
         reloadTime = 0.5f;
+        base.Awake();
     }
 
     public override void Initialize(Camera cam, WeaponManager manager)
@@ -21,7 +22,7 @@ public class Pistol : Weapon
         weaponManagerRef = manager;
     }
 
-    void Update()
+    public override void Update()
     {
         if (weaponManagerRef != null && weaponManagerRef.IsFirePressed() && CanFire())
         {
