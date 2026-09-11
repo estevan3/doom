@@ -6,6 +6,7 @@ public class Chainsaw : Weapon
     public float attackRange = 3f;
     private bool isAttacking = false;
     private CameraShake cameraShake;
+    private WeaponManager weaponManager;
 
     void Awake()
     {
@@ -19,12 +20,13 @@ public class Chainsaw : Weapon
     public override void Initialize(Camera cam, WeaponManager manager)
     {
         base.Initialize(cam, manager);
+        weaponManager = manager;
         cameraShake = cam.GetComponent<CameraShake>();
     }
 
     void Update()
     {
-        if (Input.GetMouseButton(0) && CanFire())
+        if (weaponManager != null && weaponManager.IsFirePressed() && CanFire())
         {
             isAttacking = true;
             Fire();
@@ -60,6 +62,7 @@ public class Chainsaw : Weapon
         if (Physics.Raycast(ray, out hit, attackRange))
         {
             Enemy enemy = hit.collider.GetComponent<Enemy>();
+            if (enemy == null) enemy = hit.collider.GetComponentInParent<Enemy>();
             if (enemy != null)
             {
                 enemy.TakeDamage(damage);

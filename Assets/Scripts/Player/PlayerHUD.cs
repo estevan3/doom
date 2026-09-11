@@ -144,6 +144,8 @@ public class PlayerHUD : MonoBehaviour
         rect.anchorMax = new Vector2(0, 1);
         rect.anchoredPosition = position;
         rect.sizeDelta = size;
+        Text t = obj.AddComponent<Text>();
+        if (uiFont != null) t.font = uiFont;
         return obj;
     }
 

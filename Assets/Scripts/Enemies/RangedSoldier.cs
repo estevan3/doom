@@ -23,14 +23,17 @@ public class RangedSoldier : Enemy
     protected override void Start()
     {
         base.Start();
-        GetComponent<Renderer>().material.color = new Color(1f, 0.6f, 0f);
+        Renderer rend = GetComponent<Renderer>();
+        if (rend != null) rend.material.color = new Color(1f, 0.6f, 0f);
         strafeDirection = transform.right;
     }
 
     protected override void HandleBehavior(float distanceToPlayer)
     {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh) return;
+        if (player == null) return;
+
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
-        float angleToPlayer = Vector3.Angle(transform.forward, directionToPlayer);
 
         transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
 
@@ -60,6 +63,7 @@ public class RangedSoldier : Enemy
 
     protected override void Attack()
     {
+        if (player == null) return;
         if (Time.time < nextAttackTime) return;
         nextAttackTime = Time.time + attackRate;
 

@@ -42,6 +42,9 @@ public class TankBrute : Enemy
 
     protected override void HandleBehavior(float distanceToPlayer)
     {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh) return;
+        if (player == null) return;
+
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
 
         transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
@@ -112,7 +115,7 @@ public class TankBrute : Enemy
         slamEffect.transform.position = transform.position + transform.forward * 1.5f;
         slamEffect.transform.localScale = Vector3.one * slamRange * 2f;
         Renderer rend = slamEffect.GetComponent<Renderer>();
-        rend.material.color = new Color(1f, 0.3f, 0f, 0.5f);
+        if (rend != null) rend.material.color = new Color(1f, 0.3f, 0f, 0.5f);
 
         Collider col = slamEffect.GetComponent<Collider>();
         if (col != null) Destroy(col);

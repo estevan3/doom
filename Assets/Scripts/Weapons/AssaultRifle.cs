@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class AssaultRifle : Weapon
 {
+    private WeaponManager weaponManagerRef;
+
     void Awake()
     {
         weaponName = "Assault Rifle";
@@ -13,17 +15,41 @@ public class AssaultRifle : Weapon
         reloadTime = 2.0f;
     }
 
+    public override void Initialize(Camera cam, WeaponManager manager)
+    {
+        base.Initialize(cam, manager);
+        weaponManagerRef = manager;
+    }
+
     void Update()
     {
-        if (Input.GetMouseButton(0) && CanFire())
+        if (weaponManagerRef != null && weaponManagerRef.IsFirePressed() && CanFire())
         {
             Fire();
         }
+    }
 
-        if (Input.GetKeyDown(KeyCode.R))
+    public override bool CanFire()
+    {
+        if (Time.time < nextFireTime) return false;
+        if (isReloading) return false;
+        if (usesAmmo && currentAmmo <= 0) return false;
+        return true;
+    }
+
+    public override void Fire()
+    {
+        if (!CanFire()) return;
+
+        nextFireTime = Time.time + fireRate;
+
+        if (usesAmmo)
         {
-            StartReload();
+            currentAmmo--;
+            InvokeAmmoChanged(currentAmmo, false);
         }
+
+        PerformAttack();
     }
 
     protected override void PerformAttack()
@@ -36,11 +62,10 @@ public class AssaultRifle : Weapon
         spread += playerCamera.transform.up * Random.Range(-0.02f, 0.02f);
         ray.direction = spread.normalized;
 
-        Debug.DrawRay(ray.origin, ray.direction * range, Color.red, 0.1f);
-
         if (Physics.Raycast(ray, out hit, range))
         {
             Enemy enemy = hit.collider.GetComponent<Enemy>();
+            if (enemy == null) enemy = hit.collider.GetComponentInParent<Enemy>();
             if (enemy != null)
             {
                 enemy.TakeDamage(damage);

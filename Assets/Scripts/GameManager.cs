@@ -27,6 +27,12 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        if (PlayerInputActions.Instance == null)
+        {
+            GameObject inputObj = new GameObject("PlayerInputActions");
+            inputObj.AddComponent<PlayerInputActions>();
+        }
+
         SetupPlayer();
         SetupGame();
     }

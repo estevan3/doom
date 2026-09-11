@@ -39,12 +39,15 @@ public class WeaponManager : MonoBehaviour
     {
         if (FindObjectOfType<PlayerController>()?.IsDead() == true) return;
 
-        if (Input.GetKeyDown(KeyCode.Alpha1)) EquipWeapon(0);
-        if (Input.GetKeyDown(KeyCode.Alpha2)) EquipWeapon(1);
-        if (Input.GetKeyDown(KeyCode.Alpha3)) EquipWeapon(2);
-        if (Input.GetKeyDown(KeyCode.Alpha4)) EquipWeapon(3);
+        var input = PlayerInputActions.Instance;
+        if (input == null) return;
 
-        if (Input.GetKeyDown(KeyCode.R))
+        if (input.weapon1Action.WasPressedThisFrame()) EquipWeapon(0);
+        if (input.weapon2Action.WasPressedThisFrame()) EquipWeapon(1);
+        if (input.weapon3Action.WasPressedThisFrame()) EquipWeapon(2);
+        if (input.weapon4Action.WasPressedThisFrame()) EquipWeapon(3);
+
+        if (input.reloadAction.WasPressedThisFrame())
         {
             Weapon current = weapons[currentWeaponIndex];
             if (current != null && current.UsesAmmo())
@@ -52,6 +55,12 @@ public class WeaponManager : MonoBehaviour
                 current.StartReload();
             }
         }
+    }
+
+    public bool IsFirePressed()
+    {
+        var input = PlayerInputActions.Instance;
+        return input != null && input.fireAction.IsPressed();
     }
 
     public void EquipWeapon(int index)

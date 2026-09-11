@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
@@ -31,7 +32,7 @@ public class PlayerController : MonoBehaviour
     public delegate void HealthChangedHandler(int current, int max);
     public event HealthChangedHandler OnHealthChanged;
 
-    void Start()
+    void Awake()
     {
         characterController = GetComponent<CharacterController>();
         if (characterController == null)
@@ -64,17 +65,18 @@ public class PlayerController : MonoBehaviour
 
     void HandleMovement()
     {
-        isSprinting = Input.GetKey(KeyCode.LeftShift);
-        float currentSpeed = isSprinting ? sprintSpeed : walkSpeed;
+        var input = PlayerInputActions.Instance;
+        if (input == null) return;
 
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
+        Vector2 moveInput = input.moveAction.ReadValue<Vector2>();
+        isSprinting = input.sprintAction.IsPressed();
+        float currentSpeed = isSprinting ? sprintSpeed : walkSpeed;
 
         Vector3 forward = transform.forward;
         Vector3 right = transform.right;
 
-        moveDirection.x = (forward * vertical + right * horizontal).x * currentSpeed;
-        moveDirection.z = (forward * vertical + right * horizontal).z * currentSpeed;
+        moveDirection.x = (forward * moveInput.y + right * moveInput.x).x * currentSpeed;
+        moveDirection.z = (forward * moveInput.y + right * moveInput.x).z * currentSpeed;
 
         if (!characterController.isGrounded)
         {
@@ -86,8 +88,12 @@ public class PlayerController : MonoBehaviour
 
     void HandleLook()
     {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        var input = PlayerInputActions.Instance;
+        if (input == null) return;
+
+        Vector2 lookInput = input.lookAction.ReadValue<Vector2>();
+        float mouseX = lookInput.x * mouseSensitivity;
+        float mouseY = lookInput.y * mouseSensitivity;
 
         rotationX -= mouseY;
         rotationX = Mathf.Clamp(rotationX, -maxLookAngle, maxLookAngle);
@@ -98,7 +104,10 @@ public class PlayerController : MonoBehaviour
 
     void HandleJump()
     {
-        if (characterController.isGrounded && Input.GetButtonDown("Jump"))
+        var input = PlayerInputActions.Instance;
+        if (input == null) return;
+
+        if (characterController.isGrounded && input.jumpAction.IsPressed())
         {
             moveDirection.y = jumpForce;
         }

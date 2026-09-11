@@ -17,11 +17,15 @@ public class ZombieRunner : Enemy
     protected override void Start()
     {
         base.Start();
-        GetComponent<Renderer>().material.color = Color.green;
+        Renderer rend = GetComponent<Renderer>();
+        if (rend != null) rend.material.color = Color.green;
     }
 
     protected override void HandleBehavior(float distanceToPlayer)
     {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh) return;
+        if (player == null) return;
+
         if (distanceToPlayer <= attackRange)
         {
             Attack();

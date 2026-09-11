@@ -5,6 +5,7 @@ public class Shotgun : Weapon
     public int pelletCount = 8;
     public float spreadAngle = 5f;
     public int pelletDamage = 8;
+    private WeaponManager weaponManagerRef;
 
     void Awake()
     {
@@ -15,6 +16,43 @@ public class Shotgun : Weapon
         usesAmmo = true;
         maxAmmo = 50;
         reloadTime = 2.0f;
+    }
+
+    public override void Initialize(Camera cam, WeaponManager manager)
+    {
+        base.Initialize(cam, manager);
+        weaponManagerRef = manager;
+    }
+
+    void Update()
+    {
+        if (weaponManagerRef != null && weaponManagerRef.IsFirePressed() && CanFire())
+        {
+            Fire();
+        }
+    }
+
+    public override bool CanFire()
+    {
+        if (Time.time < nextFireTime) return false;
+        if (isReloading) return false;
+        if (usesAmmo && currentAmmo <= 0) return false;
+        return true;
+    }
+
+    public override void Fire()
+    {
+        if (!CanFire()) return;
+
+        nextFireTime = Time.time + fireRate;
+
+        if (usesAmmo)
+        {
+            currentAmmo--;
+            InvokeAmmoChanged(currentAmmo, false);
+        }
+
+        PerformAttack();
     }
 
     protected override void PerformAttack()
@@ -31,6 +69,7 @@ public class Shotgun : Weapon
             if (Physics.Raycast(ray, out hit, range))
             {
                 Enemy enemy = hit.collider.GetComponent<Enemy>();
+                if (enemy == null) enemy = hit.collider.GetComponentInParent<Enemy>();
                 if (enemy != null)
                 {
                     enemy.TakeDamage(pelletDamage);

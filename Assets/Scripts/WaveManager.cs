@@ -98,28 +98,15 @@ public class WaveManager : MonoBehaviour
 
     void FindSpawnPoints()
     {
-        GameObject[] spawnPointObjects = GameObject.FindGameObjectsWithTag("EnemySpawnPoint");
-
-        if (spawnPointObjects.Length > 0)
+        List<Transform> points = new List<Transform>();
+        foreach (GameObject obj in FindObjectsOfType<GameObject>())
         {
-            spawnPoints = new Transform[spawnPointObjects.Length];
-            for (int i = 0; i < spawnPointObjects.Length; i++)
+            if (obj.name.Contains("EnemySpawnPoint"))
             {
-                spawnPoints[i] = spawnPointObjects[i].transform;
+                points.Add(obj.transform);
             }
         }
-        else
-        {
-            List<Transform> points = new List<Transform>();
-            foreach (GameObject obj in FindObjectsOfType<GameObject>())
-            {
-                if (obj.name.StartsWith("EnemySpawnPoint"))
-                {
-                    points.Add(obj.transform);
-                }
-            }
-            spawnPoints = points.ToArray();
-        }
+        spawnPoints = points.ToArray();
     }
 
     IEnumerator StartFirstWave()
