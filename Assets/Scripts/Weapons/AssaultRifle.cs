@@ -7,6 +7,8 @@ public class AssaultRifle : Weapon
     protected override void Awake()
     {
         weaponName = "Assault Rifle";
+        soundFolder = "AssaultRifle";
+        soundBaseName = "assault_rifle";
         damage = 10;
         fireRate = 0.1f;
         range = 150f;
@@ -51,6 +53,7 @@ public class AssaultRifle : Weapon
         }
 
         PerformAttack();
+        PlayFireSound();
     }
 
     protected override void PerformAttack()

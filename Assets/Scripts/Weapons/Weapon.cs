@@ -16,9 +16,16 @@ public abstract class Weapon : MonoBehaviour
     public Camera playerCamera;
     public Transform muzzlePoint;
 
+    [Header("Audio")]
+    public AudioClip[] fireSounds = new AudioClip[3];
+    [SerializeField] private AudioClip equipSound;
+
     protected float nextFireTime = 0f;
     protected bool isReloading = false;
     protected WeaponManager weaponManager;
+    protected AudioSource audioSource;
+    protected string soundFolder = "";
+    protected string soundBaseName = "";
 
     public delegate void AmmoChangedHandler(int current, bool infinite);
     public event AmmoChangedHandler OnAmmoChanged;
@@ -26,6 +33,31 @@ public abstract class Weapon : MonoBehaviour
     protected virtual void Awake()
     {
         currentAmmo = maxAmmo;
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        LoadWeaponAudio();
+    }
+
+    protected virtual void LoadWeaponAudio()
+    {
+        if (string.IsNullOrEmpty(soundFolder) || string.IsNullOrEmpty(soundBaseName)) return;
+        equipSound = Resources.Load<AudioClip>($"WeaponSounds/{soundFolder}/{soundBaseName}_weapon_equip");
+        for (int i = 0; i < fireSounds.Length; i++)
+            fireSounds[i] = Resources.Load<AudioClip>($"WeaponSounds/{soundFolder}/{soundBaseName}_gunshot_0{i + 1}");
+    }
+
+    public virtual void PlayEquipSound()
+    {
+        if (audioSource == null || equipSound == null) return;
+        audioSource.PlayOneShot(equipSound);
+    }
+
+    public virtual void PlayFireSound()
+    {
+        if (audioSource == null || fireSounds == null || fireSounds.Length == 0) return;
+        AudioClip clip = fireSounds[Random.Range(0, fireSounds.Length)];
+        if (clip != null) audioSource.PlayOneShot(clip);
     }
 
     public virtual void Initialize(Camera cam, WeaponManager manager)

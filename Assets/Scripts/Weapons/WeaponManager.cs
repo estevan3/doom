@@ -73,7 +73,10 @@ public class WeaponManager : MonoBehaviour
         currentWeaponIndex = index;
 
         if (weapons[currentWeaponIndex] != null)
+        {
             weapons[currentWeaponIndex].enabled = true;
+            weapons[currentWeaponIndex].PlayEquipSound();
+        }
 
         UpdateHUD();
     }

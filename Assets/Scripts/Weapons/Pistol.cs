@@ -7,6 +7,8 @@ public class Pistol : Weapon
     protected override void Awake()
     {
         weaponName = "Pistol";
+        soundFolder = "Pistol";
+        soundBaseName = "handgun";
         damage = 15;
         fireRate = 0.3f;
         range = 100f;
@@ -51,6 +53,7 @@ public class Pistol : Weapon
         }
 
         PerformAttack();
+        PlayFireSound();
     }
 
     protected override void PerformAttack()

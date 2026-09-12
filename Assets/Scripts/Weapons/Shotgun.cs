@@ -10,6 +10,8 @@ public class Shotgun : Weapon
     protected override void Awake()
     {
         weaponName = "Shotgun";
+        soundFolder = "Shotgun";
+        soundBaseName = "shotgun";
         damage = 64;
         fireRate = 0.8f;
         range = 30f;
@@ -54,6 +56,7 @@ public class Shotgun : Weapon
         }
 
         PerformAttack();
+        PlayFireSound();
     }
 
     protected override void PerformAttack()

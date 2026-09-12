@@ -52,6 +52,7 @@ public class Chainsaw : Weapon
         if (!CanFire()) return;
         nextFireTime = Time.time + fireRate;
         PerformAttack();
+        PlayFireSound();
     }
 
     protected override void PerformAttack()
