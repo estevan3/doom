@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 
 public class PlayerHUD : MonoBehaviour
 {
@@ -14,6 +16,7 @@ public class PlayerHUD : MonoBehaviour
 
     private PlayerController playerController;
     private WeaponManager weaponManager;
+    private GameObject restartButton;
     private Font uiFont;
 
     void Start()
@@ -22,6 +25,7 @@ public class PlayerHUD : MonoBehaviour
         weaponManager = FindAnyObjectByType<WeaponManager>();
 
         uiFont = LoadFont();
+        EnsureEventSystem();
 
         if (playerController != null)
         {
@@ -115,10 +119,60 @@ public class PlayerHUD : MonoBehaviour
         if (uiFont != null) waveSurvivedText.font = uiFont;
         waveSurvivedObj.SetActive(false);
 
+        restartButton = CreateButton(canvasObj.transform, new Vector2(-195, -80), new Vector2(390, 50), "REINICIAR", () =>
+        {
+            if (GameManager.Instance != null)
+                GameManager.Instance.RestartGame();
+        });
+        restartButton.SetActive(false);
+
         GameObject crosshair = CreateBackground("Crosshair", canvasObj.transform, new Vector2(-8, -8), new Vector2(16, 16));
         crosshair.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
         crosshair.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
         crosshair.GetComponent<Image>().color = Color.white;
+    }
+
+    void EnsureEventSystem()
+    {
+        if (FindAnyObjectByType<EventSystem>() != null) return;
+
+        GameObject esObj = new GameObject("EventSystem");
+        esObj.AddComponent<EventSystem>();
+        esObj.AddComponent<InputSystemUIInputModule>();
+    }
+
+    GameObject CreateButton(Transform parent, Vector2 position, Vector2 size, string label, UnityEngine.Events.UnityAction onClick)
+    {
+        GameObject obj = new GameObject("RestartButton");
+        obj.transform.SetParent(parent, false);
+        RectTransform rect = obj.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0, 1);
+        rect.anchorMax = new Vector2(0, 1);
+        rect.pivot = new Vector2(0, 1);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+        Image img = obj.AddComponent<Image>();
+        img.color = new Color(0.35f, 0.15f, 0.15f, 1f);
+        Button btn = obj.AddComponent<Button>();
+        btn.targetGraphic = img;
+
+        GameObject labelObj = new GameObject("Label");
+        labelObj.transform.SetParent(obj.transform, false);
+        RectTransform labelRect = labelObj.AddComponent<RectTransform>();
+        labelRect.anchorMin = Vector2.zero;
+        labelRect.anchorMax = Vector2.one;
+        labelRect.offsetMin = Vector2.zero;
+        labelRect.offsetMax = Vector2.zero;
+        Text labelText = labelObj.AddComponent<Text>();
+        labelText.text = label;
+        labelText.fontSize = 32;
+        labelText.fontStyle = FontStyle.Bold;
+        labelText.color = Color.white;
+        labelText.alignment = TextAnchor.MiddleCenter;
+        if (uiFont != null) labelText.font = uiFont;
+
+        btn.onClick.AddListener(onClick);
+        return obj;
     }
 
     GameObject CreateBackground(string name, Transform parent, Vector2 position, Vector2 size)
@@ -206,6 +260,7 @@ public class PlayerHUD : MonoBehaviour
         GameObject gameOverBg = GameObject.Find("GameOverBG");
         if (gameOverBg != null) gameOverBg.SetActive(true);
         if (gameOverText != null) gameOverText.gameObject.SetActive(true);
+        if (restartButton != null) restartButton.SetActive(true);
         if (waveSurvivedText != null)
         {
             waveSurvivedText.gameObject.SetActive(true);
