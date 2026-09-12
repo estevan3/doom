@@ -40,6 +40,8 @@ public class PlayerController : MonoBehaviour
             characterController = gameObject.AddComponent<CharacterController>();
         }
 
+        mouseSensitivity = PlayerPrefs.GetFloat("MouseSensitivity", mouseSensitivity);
+
         if (playerCamera == null)
         {
             GameObject camObj = new GameObject("PlayerCamera");
