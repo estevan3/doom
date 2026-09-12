@@ -117,3 +117,10 @@ InitTestScene*.unity*
 /build*
 /UnityPlayer*
 /libdecor-*
+
+.opencode
+.vscode
+opencode.json
+*unity.md
+*.sh
+.mcp.json
