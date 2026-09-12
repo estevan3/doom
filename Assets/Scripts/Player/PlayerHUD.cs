@@ -128,6 +128,7 @@ public class PlayerHUD : MonoBehaviour
         RectTransform rect = obj.AddComponent<RectTransform>();
         rect.anchorMin = new Vector2(0, 1);
         rect.anchorMax = new Vector2(0, 1);
+        rect.pivot = new Vector2(0, 1);
         rect.anchoredPosition = position;
         rect.sizeDelta = size;
         Image img = obj.AddComponent<Image>();
@@ -142,6 +143,7 @@ public class PlayerHUD : MonoBehaviour
         RectTransform rect = obj.AddComponent<RectTransform>();
         rect.anchorMin = new Vector2(0, 1);
         rect.anchorMax = new Vector2(0, 1);
+        rect.pivot = new Vector2(0, 1);
         rect.anchoredPosition = position;
         rect.sizeDelta = size;
         Text t = obj.AddComponent<Text>();
