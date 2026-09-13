@@ -39,6 +39,9 @@ public class PlayerController : MonoBehaviour
         {
             characterController = gameObject.AddComponent<CharacterController>();
         }
+        characterController.height = 2f;
+        characterController.radius = 0.5f;
+        characterController.center = Vector3.zero;
 
         mouseSensitivity = PlayerPrefs.GetFloat("MouseSensitivity", mouseSensitivity);
 
@@ -49,6 +52,7 @@ public class PlayerController : MonoBehaviour
             camObj.transform.localPosition = new Vector3(0, 0.8f, 0);
             playerCamera = camObj.AddComponent<Camera>();
             camObj.AddComponent<AudioListener>();
+            camObj.AddComponent<CameraShake>();
         }
 
         currentHealth = maxHealth;

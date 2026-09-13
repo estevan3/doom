@@ -52,11 +52,6 @@ public class GameManager : MonoBehaviour
         playerObj.tag = "Player";
         playerObj.transform.position = spawnPos;
 
-        CapsuleCollider col = playerObj.AddComponent<CapsuleCollider>();
-        col.height = 2f;
-        col.radius = 0.5f;
-        col.center = new Vector3(0, 1, 0);
-
         playerController = playerObj.AddComponent<PlayerController>();
         weaponManager = playerObj.AddComponent<WeaponManager>();
         hud = gameObject.AddComponent<PlayerHUD>();

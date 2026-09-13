@@ -26,7 +26,7 @@ public class AssaultRifle : Weapon
 
     public override void Update()
     {
-        if (weaponManagerRef != null && weaponManagerRef.IsFirePressed() && CanFire())
+        if (weaponManagerRef != null && !weaponManagerRef.IsPlayerDead() && weaponManagerRef.IsFirePressed() && CanFire())
         {
             Fire();
         }

@@ -30,10 +30,15 @@ public class PlayerHUD : MonoBehaviour
         if (playerController != null)
         {
             playerController.OnHealthChanged += UpdateHealth;
-            playerController.OnPlayerDeath += ShowGameOver;
         }
 
         CreateHUD();
+
+        if (weaponManager != null)
+            weaponManager.UpdateHUD();
+
+        if (playerController != null)
+            UpdateHealth(playerController.currentHealth, playerController.maxHealth);
     }
 
     Font LoadFont()
@@ -268,17 +273,11 @@ public class PlayerHUD : MonoBehaviour
         }
     }
 
-    void ShowGameOver()
-    {
-        ShowGameOver(0);
-    }
-
     void OnDestroy()
     {
         if (playerController != null)
         {
             playerController.OnHealthChanged -= UpdateHealth;
-            playerController.OnPlayerDeath -= ShowGameOver;
         }
     }
 }

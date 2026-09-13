@@ -26,7 +26,7 @@ public class Chainsaw : Weapon
 
     public override void Update()
     {
-        if (weaponManager != null && weaponManager.IsFirePressed() && CanFire())
+        if (weaponManager != null && !weaponManager.IsPlayerDead() && weaponManager.IsFirePressed() && CanFire())
         {
             isAttacking = true;
             Fire();
@@ -44,6 +44,7 @@ public class Chainsaw : Weapon
 
     public override bool CanFire()
     {
+        if (Time.time < nextFireTime) return false;
         return !isReloading;
     }
 

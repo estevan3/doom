@@ -97,8 +97,11 @@ public abstract class Enemy : MonoBehaviour
 
         yield return new WaitForSeconds(0.5f);
 
-        transform.localScale = Vector3.Lerp(transform.localScale, Vector3.zero, Time.deltaTime * 5f);
-        yield return new WaitForSeconds(0.3f);
+        while (transform.localScale.sqrMagnitude > 0.001f)
+        {
+            transform.localScale = Vector3.Lerp(transform.localScale, Vector3.zero, Time.deltaTime * 5f);
+            yield return null;
+        }
 
         Destroy(gameObject);
     }

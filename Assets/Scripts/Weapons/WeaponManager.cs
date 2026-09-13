@@ -5,10 +5,12 @@ public class WeaponManager : MonoBehaviour
     public Weapon[] weapons;
     public int currentWeaponIndex = 0;
     private PlayerHUD hud;
+    private PlayerController playerController;
 
     void Start()
     {
         hud = FindAnyObjectByType<PlayerHUD>();
+        playerController = GetComponent<PlayerController>();
         InitializeWeapons();
         EquipWeapon(0);
     }
@@ -32,12 +34,18 @@ public class WeaponManager : MonoBehaviour
         {
             w.enabled = false;
             w.Initialize(cam, this);
+            w.OnAmmoChanged += OnWeaponAmmoChanged;
         }
+    }
+
+    void OnWeaponAmmoChanged(int current, bool infinite)
+    {
+        UpdateHUD();
     }
 
     void Update()
     {
-        if (FindAnyObjectByType<PlayerController>()?.IsDead() == true) return;
+        if (IsPlayerDead()) return;
 
         var input = PlayerInputActions.Instance;
         if (input == null) return;
@@ -93,6 +101,11 @@ public class WeaponManager : MonoBehaviour
     public Weapon GetCurrentWeapon()
     {
         return weapons[currentWeaponIndex];
+    }
+
+    public bool IsPlayerDead()
+    {
+        return playerController != null && playerController.IsDead();
     }
 
     public Weapon[] GetWeapons() => weapons;

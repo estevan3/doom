@@ -143,6 +143,15 @@ public class WaveManager : MonoBehaviour
 
     IEnumerator SpawnWave(int enemyCount)
     {
+        if (spawnPoints.Length == 0)
+        {
+            Debug.LogError("WaveManager: nenhum EnemySpawnPoint encontrado. Onda ignorada.");
+            yield return new WaitForSeconds(1f);
+            waveInProgress = false;
+            StartCoroutine(CooldownBetweenWaves());
+            yield break;
+        }
+
         int zombies = Mathf.RoundToInt(enemyCount * GetZombieRatio());
         int soldiers = Mathf.RoundToInt(enemyCount * GetSoldierRatio());
         int brutes = Mathf.RoundToInt(enemyCount * GetBruteRatio());
@@ -172,7 +181,7 @@ public class WaveManager : MonoBehaviour
             yield return new WaitForSeconds(0.5f);
         }
 
-        enemiesAlive = enemyCount;
+        enemiesAlive = total;
     }
 
     float GetZombieRatio()
