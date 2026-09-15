@@ -6,7 +6,8 @@
     "UnityEditor.TestRunner",
     "DoomClone.Runtime",
     "DoomClone.Automation",
-    "Unity.AI.Navigation"
+    "Unity.AI.Navigation",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

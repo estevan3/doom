@@ -17,6 +17,8 @@ public class PlayerHUD : MonoBehaviour
     private PlayerController playerController;
     private WeaponManager weaponManager;
     private GameObject restartButton;
+    private GameObject countdownBg;
+    private GameObject gameOverBg;
     private Font uiFont;
 
     void Start()
@@ -84,6 +86,7 @@ public class PlayerHUD : MonoBehaviour
         GameObject countdownBg = CreateBackground("CountdownBG", canvasObj.transform, new Vector2(-100, 50), new Vector2(200, 50));
         countdownBg.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
         countdownBg.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
+        this.countdownBg = countdownBg;
         countdownBg.SetActive(false);
         GameObject countdownObj = CreateTextObject("CountdownText", canvasObj.transform, new Vector2(-100, 50), new Vector2(200, 50));
         countdownObj.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
@@ -100,6 +103,7 @@ public class PlayerHUD : MonoBehaviour
         gameOverBg.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
         gameOverBg.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
         gameOverBg.GetComponent<Image>().color = new Color(0.5f, 0, 0, 0.9f);
+        this.gameOverBg = gameOverBg;
         gameOverBg.SetActive(false);
 
         GameObject gameOverObj = CreateTextObject("GameOverText", canvasObj.transform, new Vector2(-195, 20), new Vector2(390, 60));
@@ -244,25 +248,23 @@ public class PlayerHUD : MonoBehaviour
 
     public void ShowCountdown(int seconds)
     {
-        GameObject countdownBg = GameObject.Find("CountdownBG");
-        GameObject countdownObj = GameObject.Find("CountdownText");
         if (countdownBg != null) countdownBg.SetActive(true);
-        if (countdownObj != null) countdownObj.SetActive(true);
         if (waveCountdownText != null)
+        {
+            waveCountdownText.gameObject.SetActive(true);
             waveCountdownText.text = $"Next wave in: {seconds}...";
+        }
     }
 
     public void HideCountdown()
     {
-        GameObject countdownBg = GameObject.Find("CountdownBG");
-        GameObject countdownObj = GameObject.Find("CountdownText");
         if (countdownBg != null) countdownBg.SetActive(false);
-        if (countdownObj != null) countdownObj.SetActive(false);
+        if (waveCountdownText != null)
+            waveCountdownText.gameObject.SetActive(false);
     }
 
     public void ShowGameOver(int wavesSurvived)
     {
-        GameObject gameOverBg = GameObject.Find("GameOverBG");
         if (gameOverBg != null) gameOverBg.SetActive(true);
         if (gameOverText != null) gameOverText.gameObject.SetActive(true);
         if (restartButton != null) restartButton.SetActive(true);

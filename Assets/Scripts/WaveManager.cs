@@ -373,6 +373,7 @@ public class WaveManager : MonoBehaviour
     void OnPlayerDeath()
     {
         gameActive = false;
+        waveInProgress = false;
         StopAllCoroutines();
 
         if (hud != null)

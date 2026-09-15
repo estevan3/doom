@@ -116,21 +116,33 @@ Acceptance:
 
 ## Milestone 4 — Player + HUD
 
-- [~] Implement CharacterController movement (implemented in `PlayerController`).
-- [~] Implement mouse look (in `PlayerController`).
-- [~] Implement sprint.
-- [~] Implement jump.
-- [~] Implement 100 HP.
-- [~] Implement death state.
-- [~] Implement restart behavior.
-- [~] Implement HUD shell (`PlayerHUD`, code-driven).
-- [ ] Add Player PlayMode tests.
+- [x] Implement CharacterController movement (implemented in `PlayerController`).
+- [x] Implement mouse look (in `PlayerController`).
+- [x] Implement sprint.
+- [x] Implement jump.
+- [x] Implement 100 HP.
+- [x] Implement death state.
+- [x] Implement restart behavior.
+- [x] Implement HUD shell (`PlayerHUD`, code-driven).
+- [x] Add Player PlayMode tests.
 
-Acceptance:
+Acceptance (verified 2026-09-15, full PlayMode suite 19/19 + PlayerTests class 13/13):
 
-- Player can move around the blockout. Not run-verified in this pass.
-- Damage/death/restart works. Not run-verified in this pass.
-- HUD displays required fields. Not run-verified in this pass.
+- Player can move around the blockout. ✔ (time-based WASD test; sprint > walk.)
+- Damage/death/restart works. ✔ (health 100 start, damage reduces, 0 HP → Game Over, restart → clean 100 HP state.)
+- HUD displays required fields. ✔ (HP, weapon, ammo, wave, countdown; `Player_HUD_CountdownAndGameOver` asserts countdown text `Próxima horda em:` descending + GameOver panel.)
+- HUD screenshot captured. ✔ (`TestResults/player_hud_screenshot.png`, 1280x720.)
+
+Defects found & fixed by the M4 suite:
+
+- `PlayerHUD.ShowCountdown`/`HideCountdown`/`ShowGameOver` used `GameObject.Find` on GameObjects created inactive (`CountdownBG`/`GameOverBG`) — `Find` never finds inactive objects, so the countdown and Game Over panels could never render. Now uses stored references set in `CreateHUD`.
+- `WaveManager.OnPlayerDeath` did not clear `waveInProgress`, so `IsWaveInProgress()` stayed `true` forever after death, violating GAME_SPEC §7 "stop the active wave loop". Fixed by setting `waveInProgress = false`.
+- Test isolation: `Player_HUD_*` tests guard with `GameTestAPI.SetPlayerHealth(100)` against incidental wave damage.
+- Movement/sprint tests rewritten time-based (`Time.realtimeSinceStartup`) — frame-count measurement was unreliable because batchmode FPS varies wildly between walk (~140) and sprint (~380) phases.
+
+Editor test-infra fix (project setting):
+
+- `m_EnterPlayModeOptionsEnabled = 0` in `ProjectSettings/EditorSettings.asset`: with Enter Play Mode Options set to "Disable Domain Reload + Disable Scene Reload", the Unity TestRunner executes PlayMode tests as 0 tests (pass with empty result) — EditMode unaffected. Disabling restores reliable PlayMode runs via MCP `tests-run` (symptom: `Status Unknown, TotalTests 0`).
 
 ## Milestone 5 — Weapon framework
 

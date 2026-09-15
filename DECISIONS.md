@@ -101,3 +101,43 @@ This file records consequential choices that are intentionally left open by `GAM
 **Alternatives considered:** Resetting `WaveManager.gameActive`/wave state in code on scene load. Rejected — a reload already exists (`RestartGame`) and gives a fully clean singleton/state baseline rather than ad-hoc resets.
 
 **Impact:** `SpawnEnemy("runner")` in later tests always works after a fresh boot; wave tracking and player health are clean per test.
+
+### 2026-09-15 — Player test input injection without `InputTestFixture`
+
+**Decision:** PlayMode player tests drive input by adding a synthetic `Keyboard` (`InputSystem.AddDevice<Keyboard>("TestKeyboard")`) and `Mouse` (`"TestMouse"`), then `QueueStateEvent` + `InputSystem.Update()` to press/release keys. The New Input System default bindings target the `Keyboard` layout, so the owned `TestKeyboard` device drives the real `moveAction`/`sprintAction`/`jumpAction`.
+
+**Reason:** `InputTestFixture` resets the entire input system per fixture, which destroys the game's `DontDestroyOnLoad` `PlayerInputActions` singleton that `PlayerController` depends on — tests would crash and not reflect production startup.
+
+**Alternatives considered:** `InputTestFixture` (rejected — breaks production singleton); directly invoking `PlayerController` movement internals (rejected — bypasses the real input path).
+
+**Impact:** Tests exercise the genuine Input System → `PlayerController` path. The input effect is transient (synthetic device added/removed around the action), so the running game state on the edited scene is not polluted.
+
+### 2026-09-15 — `PlayerHUD` countdown/game-over panels: stored references instead of `GameObject.Find`
+
+**Decision:** `PlayerHUD.CreateHUD` now stores the created `CountdownBG`/`GameOverBG` references in private fields; `ShowCountdown`/`HideCountdown`/`ShowGameOver` use them directly instead of `GameObject.Find("...")`.
+
+**Reason:** `CountdownBG` and `GameOverBG` are created inactive (`SetActive(false)`), and `GameObject.Find` never locates inactive objects — so the wave countdown and Game Over panels could never render, silently violating GAME_SPEC §6.6 and §7. The M4 PlayMode suite (`Player_HUD_CountdownAndGameOver`) caught this.
+
+**Alternatives considered:** Activating the panels before `Find` (extra state churn); tagging the objects and using `FindWithTag` (still misses inactive objects).
+
+**Impact:** Both countdown UI and Game Over UI now render when their production code paths run; verified by the 13/13 PlayerTests.
+
+### 2026-09-15 — WaveManager stops the active loop on player death
+
+**Decision:** `WaveManager.OnPlayerDeath` now explicitly sets `waveInProgress = false` (and the death path already stops future spawning).
+
+**Reason:** Without it, `IsWaveInProgress()` stayed `true` forever after the player died, contradicting GAME_SPEC §7 "stop the active wave loop" — any later restart-adjacent logic would observe a phantom in-progress wave. Found by the M4 suite.
+
+**Alternatives considered:** Relying only on the existing `gameActive = false` guard in spawn paths.
+
+**Impact:** Wave state transitions to a truthful not-in-progress state on death; player restart remains clean.
+
+### 2026-09-15 — Editor test-infra: disable Enter Play Mode Options for reliable PlayMode runs
+
+**Decision:** Set `m_EnterPlayModeOptionsEnabled = 0` in `ProjectSettings/EditorSettings.asset` (was enabled with "Disable Domain Reload" + "Disable Scene Reload").
+
+**Reason:** With Enter Play Mode Options on, the Unity TestRunner executes PlayMode test runs as **0 tests** that "pass" instantly (`Status Unknown, TotalTests 0` via MCP; empty `TestResults.xml` with `result="Passed" total="0"`). EditMode is unaffected. Disabling restores real execution (full suite 19/19). This is an editor test-infra setting, not a gameplay change.
+
+**Alternatives considered:** Accepting flaky MCP runs and relying on `tools/test.sh` CLI only (same TestRunner under the hood — would hit the same symptom in batchmode).
+
+**Impact:** Reliable PlayMode verification through MCP `tests-run`; entering Play Mode now reloads domain/scene as default Unity behavior.
