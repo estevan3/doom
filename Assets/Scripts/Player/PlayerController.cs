@@ -140,6 +140,19 @@ public class PlayerController : MonoBehaviour
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
 
+    public void SetHealth(int health)
+    {
+        if (isDead && health <= 0) return;
+
+        currentHealth = Mathf.Clamp(health, 0, maxHealth);
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+        if (currentHealth <= 0 && !isDead)
+        {
+            Die();
+        }
+    }
+
     void Die()
     {
         isDead = true;

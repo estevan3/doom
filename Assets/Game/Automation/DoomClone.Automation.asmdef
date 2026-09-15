@@ -1,0 +1,16 @@
+{
+  "name": "DoomClone.Automation",
+  "rootNamespace": "DoomClone.Automation",
+  "references": [
+    "DoomClone.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

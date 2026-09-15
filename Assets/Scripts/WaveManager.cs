@@ -205,9 +205,51 @@ public class WaveManager : MonoBehaviour
         return 0.3f;
     }
 
+    public GameObject SpawnEnemyByType(string type)
+    {
+        if (!gameActive) return null;
+        if (spawnPoints.Length == 0) return null;
+
+        GameObject prefab = GetPrefabByType(type);
+        if (prefab == null) return null;
+
+        return SpawnEnemyInstance(prefab, trackInWave: false);
+    }
+
+    GameObject GetPrefabByType(string type)
+    {
+        if (string.IsNullOrEmpty(type)) return null;
+
+        switch (type.Trim().ToLowerInvariant())
+        {
+            case "runner":
+            case "zombie":
+            case "zombierunner":
+                return zombiePrefab;
+
+            case "soldier":
+            case "ranged":
+            case "rangedsoldier":
+                return soldierPrefab;
+
+            case "brute":
+            case "tank":
+            case "tankbrute":
+                return brutePrefab;
+
+            default:
+                return null;
+        }
+    }
+
     void SpawnEnemy(GameObject prefab)
     {
-        if (spawnPoints.Length == 0) return;
+        SpawnEnemyInstance(prefab, trackInWave: true);
+    }
+
+    GameObject SpawnEnemyInstance(GameObject prefab, bool trackInWave)
+    {
+        if (spawnPoints.Length == 0) return null;
 
         Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
 
@@ -225,8 +267,16 @@ public class WaveManager : MonoBehaviour
         if (enemy != null)
         {
             activeEnemies.Add(enemy);
-            enemy.OnEnemyDeath += OnEnemyDeath;
+            enemy.OnEnemyDeath += trackInWave ? OnEnemyDeath : OnAuxEnemyDeath;
         }
+
+        return enemyObj;
+    }
+
+    void OnAuxEnemyDeath(Enemy enemy)
+    {
+        activeEnemies.Remove(enemy);
+        enemy.OnEnemyDeath -= OnAuxEnemyDeath;
     }
 
     IEnumerator EnableNavMeshAgent(GameObject enemyObj, NavMeshAgent agent)

@@ -117,6 +117,12 @@ public abstract class Weapon : MonoBehaviour
         OnAmmoChanged?.Invoke(currentAmmo, false);
     }
 
+    public virtual void SetAmmo(int amount)
+    {
+        currentAmmo = Mathf.Clamp(amount, 0, maxAmmo);
+        OnAmmoChanged?.Invoke(currentAmmo, false);
+    }
+
     public bool IsReloading() => isReloading;
     public string GetName() => weaponName;
     public int GetAmmo() => currentAmmo;
