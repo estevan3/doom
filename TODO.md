@@ -96,15 +96,23 @@ Known issue deferred to M3 (Navigation): enemy spawn points are at world Y=1.0 w
 
 ## Milestone 3 — Navigation
 
-- [~] Add/configure `NavMeshSurface` (runtime-baked via `NavMeshSetup` on GameManager; not present as scene component).
-- [~] Bake navigation (automatic at runtime; no editor-baked surface).
-- [ ] Validate arena and corridors are navigable.
-- [ ] Validate enemy spawn points are usable.
-- [ ] Add navigation validation test.
+- [x] Add/configure `NavMeshSurface` (runtime-baked via `NavMeshSetup` on GameManager; not present as scene component).
+- [x] Bake navigation (automatic at runtime; no editor-baked surface).
+- [x] Validate arena and corridors are navigable.
+- [x] Validate enemy spawn points are usable.
+- [x] Add navigation validation test.
+
+Also fixed in this milestone:
+
+- Level blockout bug: full-length East/West walls sealed the arena — 8 wall segments were split to leave door gaps z∈[-5,5] mirroring the North corridor; both corridors now path to the arena.
+- Runtime spawn/bake race (`"SetDestination" can only be called on an active agent that has been placed on a NavMesh`): `WaveManager.EnableNavMeshAgent` now waits for the NavMesh to finish baking, re-snaps the transform, enables the agent, and `Warp`s onto the NavMesh, disabling the agent entirely when placement is impossible.
+- Test isolation bug: `GameTestAPI.StartFreshLevel` skipped reloading when the level was already the active scene, leaking player-death/wave state between tests; it now always forces a clean restart.
 
 Acceptance:
 
-- An agent can path from representative spawn points toward the player. Not yet verified.
+- An agent can path from representative spawn points toward the player. ✔ (verified)
+- Enemies spawned by Wave 1 and by automation are placed on the NavMesh and move toward the player. ✔ (verified)
+- No `SetDestination` errors occur in the navigation test path. ✔ (verified — console clean)
 
 ## Milestone 4 — Player + HUD
 
@@ -246,8 +254,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 3 — Navigation**.
-Milestones 1 and 2 are complete and verified (automation foundation; level blockout with spec spawn tags). Milestone 3 must sort out NavMesh + spawn-point usability (see the deferred M3 issue under Milestone 2: spawn points at Y=1.0 do not sample as "on NavMesh", and a wave enemy can log `"SetDestination" can only be called on an active agent that has been placed on a NavMesh`).
+Next milestone to start: **Milestone 4 — Player + HUD**.
+Milestones 1, 2, and 3 are complete and verified (automation foundation; level blockout with spec spawn tags; Navigation with runtime-baked NavMesh, spawn-point usability, and the `SetDestination` spawn/bake race fixed). Milestone 3 verification: EditMode 3/3, PlayMode 6/6 (incl. 3 navigation tests — bake+path, automation-spawned enemy placement/movement, Wave-1 enemy placement/movement); console clean of `SetDestination` errors in the tested path.
 
 Milestones 4–14 gameplay code already exists and compiles but is **unverified by tests**; each still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
 After completing each milestone, update this file and commit the result.

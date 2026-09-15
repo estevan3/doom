@@ -71,3 +71,33 @@ This file records consequential choices that are intentionally left open by `GAM
 **Alternatives considered:** Requiring manual Editor runs. Rejected — against the autonomous operating mode.
 
 **Impact:** Enables the CI/smoke loop and future milestone verification.
+
+### 2026-09-15 — Corridor door gaps: split arena walls to mirror the North gap
+
+**Decision:** The 4 full-length East/West arena walls (x=±15, z∈[-15,15], scale (0.5,1.5,10)) were split at z=-10 and z=10 into Top/Bottom segments, leaving door gaps z∈[-5,5] identical to the North corridor gap. East and West corridors now produce `PathComplete` routes into the arena.
+
+**Reason:** `GAME_SPEC.md` §1 requires 2–3 corridors "connecting" secondary areas to the arena. `NavMesh.CalculatePath` from the E/W corridor spawn points to the player returned `PathPartial` because the sorting-by-Y/wall meshes sealed the arena on those two sides; the North corridor already worked.
+
+**Alternatives considered:** Enlarging the existing door gap by moving walls; adding a separate doorway cube with a navmesh modifier. Rejected — splitting the single wall keeps geometry uniform with the North side and requires no extra modifiers.
+
+**Impact:** All 7 enemy spawn points (4 arena corners + 3 corridors) produce complete paths to the player; verified by `Navigation_BakeCompletes_AllSpawnsSampleAndPathToPlayer`.
+
+### 2026-09-15 — Agent placement: wait for bake, re-snap, enable, then Warp
+
+**Decision:** `WaveManager.EnableNavMeshAgent` no longer enables a `NavMeshAgent` unconditionally 0.1 s after spawn. It now: waits until `NavMeshUtil.IsBaked()` (triangulation has vertices, up to 10 s), re-snaps the enemy transform onto the NavMesh via `NavMeshUtil.TrySnapToNavMesh`, enables the agent, and then `Warp`s onto the snapped point; if the bake never completes or no walkable point is found, the agent stays disabled forever so no `SetDestination` can ever be issued from an unplaced agent.
+
+**Reason:** Waves spawn ~2 s after scene load while the runtime NavMesh bake (`NavMeshSetup` → `NavMeshSurface.BuildNavMesh`) finishes around the same time. Enabling an agent before/without a valid bake caused `"SetDestination" can only be called on an active agent that has been placed on a NavMesh` and left `isOnNavMesh == false` for spawned enemies. This is the M3 fix for the deferred M2 known issue.
+
+**Alternatives considered:** Baking synchronously inside `GameManager.Start` before spawning waves (blocks first frame ~2 s) or delaying all waves until the bake is complete. Rejected — waiting per-agent is localized, additive, and keeps the 2 s first-wave timing requirement.
+
+**Impact:** Enemies spawned by waves and by `GameTestAPI.SpawnEnemy` land on the NavMesh, `isOnNavMesh == true`, and no `SetDestination` errors occur; verified by the two navigation movement tests and a clean Console.
+
+### 2026-09-15 — `StartFreshLevel` always restarts the level
+
+**Decision:** `GameTestAPI.StartFreshLevel` no longer skips reloading when the active scene is already `DoomClone_Level01`; it always calls `ResetGame()` (which routes through `GameManager.RestartGame` → scene reload) and only then waits for game-ready.
+
+**Reason:** In PlayMode suites, the level scene stays loaded across tests. If an earlier test lets the player die, `WaveManager.gameActive` stays `false`, so later `SpawnEnemyByType` calls return `null` and wave assertions observe stale state. Always restarting makes every test deterministic and independent.
+
+**Alternatives considered:** Resetting `WaveManager.gameActive`/wave state in code on scene load. Rejected — a reload already exists (`RestartGame`) and gives a fully clean singleton/state baseline rather than ad-hoc resets.
+
+**Impact:** `SpawnEnemy("runner")` in later tests always works after a fresh boot; wave tracking and player health are clean per test.

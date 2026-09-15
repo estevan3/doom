@@ -15,6 +15,7 @@ public class WaveManager : MonoBehaviour
 
     [Header("Spawn Points")]
     public Transform[] spawnPoints;
+    public float navMeshSnapRadius = 3f;
 
     [Header("Enemy Prefabs")]
     public GameObject zombiePrefab;
@@ -253,7 +254,12 @@ public class WaveManager : MonoBehaviour
 
         Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
 
-        GameObject enemyObj = Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
+        // EnemySpawnPoint markers are authoring floats above the walkable surface, so snap
+        // the spawn onto the baked NavMesh. Spawning the transform ON the NavMesh guarantees
+        // the agent places cleanly when enabled and SetDestination never throws.
+        Vector3 spawnPosition = NavMeshUtil.SnapToNavMesh(spawnPoint.position, navMeshSnapRadius);
+
+        GameObject enemyObj = Instantiate(prefab, spawnPosition, spawnPoint.rotation);
         enemyObj.SetActive(true);
 
         NavMeshAgent agent = enemyObj.GetComponent<NavMeshAgent>();
@@ -282,9 +288,49 @@ public class WaveManager : MonoBehaviour
     IEnumerator EnableNavMeshAgent(GameObject enemyObj, NavMeshAgent agent)
     {
         yield return new WaitForSeconds(0.1f);
-        if (enemyObj != null && agent != null)
+        if (enemyObj == null || agent == null) yield break;
+
+        // Wait until the runtime NavMesh is actually baked. Spawns can occur before the
+        // async bake finishes; enabling an agent then would leave it unplaced and every
+        // HandleBehavior SetDestination would throw.
+        const float bakeWaitTimeout = 10f;
+        float waitDeadline = Time.time + bakeWaitTimeout;
+        while (!NavMeshUtil.IsBaked() && Time.time < waitDeadline)
         {
-            agent.enabled = true;
+            yield return null;
+        }
+
+        if (enemyObj == null || agent == null) yield break;
+        if (!NavMeshUtil.IsBaked())
+        {
+            agent.enabled = false;
+            yield break;
+        }
+
+        // Re-snap the transform onto the baked NavMesh while the agent is still disabled.
+        // If no walkable point is found near the spawn, keep the agent disabled so it never
+        // issues SetDestination from an unplaced state.
+        if (!NavMeshUtil.TrySnapToNavMesh(enemyObj.transform.position, navMeshSnapRadius, out Vector3 snapped))
+        {
+            agent.enabled = false;
+            yield break;
+        }
+
+        enemyObj.transform.position = snapped;
+
+        if (agent.enabled) yield break;
+        agent.enabled = true;
+        yield return null;
+
+        // Defense in depth: force placement with Warp so isOnNavMesh is reliably true
+        // before any HandleBehavior runs. Disable the agent if Warp still cannot place it.
+        if (agent.isOnNavMesh == false)
+        {
+            if (agent.Warp(snapped) == false)
+            {
+                agent.enabled = false;
+            }
+            yield return null;
         }
     }
 

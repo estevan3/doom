@@ -36,11 +36,7 @@ namespace DoomClone.Automation
         public static IEnumerator StartFreshLevel(float timeoutSeconds = 30f)
         {
             GameBootstrap.SetRandomSeed(0x5EED);
-            if (SceneManager.GetActiveScene().name != LevelSceneName)
-            {
-                SceneManager.LoadScene(LevelSceneName);
-            }
-
+            ResetGame();
             yield return GameBootstrap.WaitForGameReady(timeoutSeconds);
         }
 
