@@ -52,6 +52,16 @@ This file records consequential choices that are intentionally left open by `GAM
 
 **Impact:** Automation (`GameTestAPI`) calls these public APIs; full game loop, wave tracking, and death flow are unaffected for normal play.
 
+### 2026-09-14 — Spawn-point identification: canonical tags + retained name-based lookup
+
+**Decision:** Added the custom tags `EnemySpawnPoint` and `PlayerSpawnPoint` to `ProjectSettings/TagManager.asset` and applied them to all 8 spawn markers in `DoomClone_Level01` (7 enemy + 1 player) per `GAME_SPEC.md` §1. Runtime discovery in `WaveManager.FindSpawnPoints()` and `GameManager.SetupPlayer()` remains name-based, with tag as the authoritative spec identifier.
+
+**Reason:** The spec requires the GameObjects to be identifiable by tag. Tag-based discovery would require changing production code and its fallback behavior; keeping the existing name-based lookup avoids touching gameplay code in this milestone and keeps tag and name as two independent validation surfaces (the M2 validation test asserts tagged counts match `WaveManager.spawnPoints.Length`).
+
+**Alternatives considered:** Switching `WaveManager`/`GameManager` to `FindObjectsByType`-style tag lookups now. Rejected — out of scope for the tag milestone; would change runtime discovery behavior before navigation (M3) and enemy (M10+) verification.
+
+**Impact:** `GAME_SPEC.md` §1 tag requirement satisfied and verified by `LevelValidationTests`. M3 (Navigation) should also verify that each spawn point is on/near the NavMesh (known issue: spawn points at Y=1.0 fail `NavMesh.SamplePosition(…, 0.6)`).
+
 ### 2026-09-14 — Toolchain/editor automation
 
 **Decision:** `Assets/Game/Editor/BuildAutomation.cs` (menu + CLI builds to `Builds/`) and `tools/test.sh` (EditMode / PlayMode / both via Unity `-runTests`) added. `Builds/` and `TestResults/` are ignored via `.git/info/exclude` (local only, not committed).

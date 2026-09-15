@@ -18,7 +18,7 @@ Verified facts (from file/Unity inspection, no gameplay implemented in this pass
 - Gameplay scripts live under `Assets/Scripts/` (not the `Assets/Game/...` layout from ARCHITECTURE.md) with no `Automation/`, `Editor/`, or `Tests/` folders.
 - Architecture is code-driven at runtime: `GameManager` builds NavMeshSetup, Player (CharacterController + camera + `PlayerHUD`), and `WaveManager`; `WaveManager` procedurally creates enemy prefabs and finds spawn points by name.
 - Named deviations from the spec/architecture: Runner = `ZombieRunner`, Brute = `TankBrute`; look/weapons combined into `PlayerController`/`WeaponManager` instead of `PlayerLook`/`PlayerWeaponController`.
-- Gap: `EnemySpawnPoint` / `PlayerSpawnPoint` are GameObject NAMES. `TagManager.asset` defines no custom tags; all objects are `Untagged`. The spec requires real tags (found by name currently).
+- Gap (RESOLVED in Milestone 2): `EnemySpawnPoint` / `PlayerSpawnPoint` are GameObject NAMES. `TagManager.asset` defines no custom tags; all objects were `Untagged`. The spec requires real tags (found by name currently). Now: custom tags defined in `TagManager.asset` and applied to all 8 markers; name-based lookup retained as a safe fallback.
 - Unity MCP (ai-game-developer) is connected and responding.
 - Compilation: OK — EditMode test run completed with no compile errors.
 - Tests: none exist in the project (EditMode run returned "No tests found"). No test asmdefs or fixtures.
@@ -73,19 +73,26 @@ Assembly/structure notes affecting later milestones:
 ## Milestone 2 — Level blockout
 
 - [x] Create `DoomClone_Level01`.
-- [x] Build central arena.
-- [x] Build 2–3 corridors and secondary areas (3 corridors: N/E/W + rooms).
-- [x] Add PlayerSpawnPoint (exists; tag missing — see gap above).
-- [~] Add tagged EnemySpawnPoints (7 exist by name; spec tag `EnemySpawnPoint` not defined).
+- [x] Build central arena (verified at runtime: 8 `Arena_*` objects).
+- [x] Build 2–3 corridors and secondary areas (verified at runtime: 3 corridor sets North/East/West, 22 `Room_*` objects).
+- [x] Add PlayerSpawnPoint (tagged `PlayerSpawnPoint`; 1 marker verified).
+- [x] Add tagged EnemySpawnPoints (7 exist by name; all tagged `EnemySpawnPoint`).
 - [x] Add floor, walls, ceiling.
 - [x] Add basic dark point-lighting (6 point lights).
-- [ ] Add level validation test.
+- [x] Add level validation test (`LevelValidationTests`).
 
-Acceptance:
+Acceptance (verified 2026-09-14):
 
 - Scene loads. ✔
-- Required geometry and markers exist. ✔ (markers by name; tags still needed)
+- Required geometry and markers exist. ✔ (markers found by BOTH tag and name)
+- Player spawn marker tagged `PlayerSpawnPoint`. ✔
+- 7 enemy spawn points tagged `EnemySpawnPoint`. ✔
+- Tags defined in `ProjectSettings/TagManager.asset`. ✔
+- WaveManager discovers all 7 spawn points at runtime (7 == 7 tagged). ✔
+- EditMode suite: 3/3 passed. PlayMode suite: 3/3 passed (incl. `Level01_Composition_SpawnTagsAndNavMesh_AreValid`).
 - No blocking console errors. ✔
+
+Known issue deferred to M3 (Navigation): enemy spawn points are at world Y=1.0 while the NavMesh surface sits lower — `NavMesh.SamplePosition(spawn.pos, 0.6)` fails for ALL 7, and a wave enemy can log `"SetDestination" can only be called on an active agent that has been placed on a NavMesh` (ZombieRunner:33) when its agent is enabled before being fully placed. This is enemy/nav behavior, does NOT block M2 (no new errors in the M2 test path), and is exactly the "validate enemy spawn points usable" item of Milestone 3.
 
 ## Milestone 3 — Navigation
 
@@ -239,6 +246,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 1 — Automation foundation** (no gameplay until automation/test scaffolding exists).
-The engine/level/gameplay code from milestones 2–14 already exists and compiles but is **unverified by tests** and has spec gaps (missing spawn-point tags, missing `Assets/Game/...` layout, no test suite). Each of those milestones still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
+Next milestone to start: **Milestone 3 — Navigation**.
+Milestones 1 and 2 are complete and verified (automation foundation; level blockout with spec spawn tags). Milestone 3 must sort out NavMesh + spawn-point usability (see the deferred M3 issue under Milestone 2: spawn points at Y=1.0 do not sample as "on NavMesh", and a wave enemy can log `"SetDestination" can only be called on an active agent that has been placed on a NavMesh`).
+
+Milestones 4–14 gameplay code already exists and compiles but is **unverified by tests**; each still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
 After completing each milestone, update this file and commit the result.
