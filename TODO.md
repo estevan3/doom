@@ -212,11 +212,28 @@ Acceptance (verified 2026-09-15, full PlayMode suite 44/44 + EditMode 3/3, Shotg
 
 ## Milestone 8 — Assault Rifle
 
-- [~] Implement automatic hitscan.
-- [~] Implement medium damage.
-- [~] Implement limited ammo.
-- [~] Implement high cadence.
-- [ ] Add tests.
+- [x] Implement automatic hitscan.
+- [x] Implement medium damage.
+- [x] Implement limited ammo.
+- [x] Implement high cadence.
+- [x] Add tests (`Assets/Game/Tests/PlayMode/AssaultRifleTests.cs`, 7 tests).
+
+Acceptance (verified 2026-09-15, full PlayMode suite 51/51 + EditMode 3/3, AssaultRifleTests 7/7):
+
+- Config matches spec: damage 10 (medium), fireRate 0.1 s (≥3× faster than the pistol's 0.3 s), range 150 m (≥ pistol), 120 rounds starting ammo that drains quickly (full mag empties in 12 s at cadence), usesAmmo. ✔
+- Sustained DPS exceeds the pistol (100/s vs ~50/s), proving rifle-tier damage while ammo stays limited. ✔
+- One direct `Fire()` consumes exactly 1 round and raises `OnAmmoChanged` exactly once. ✔
+- Cadence 0.1 s respected frame-independently: immediate refire blocked (no round consumed), gate reopens within [0.05, 0.6] s after fireRate. ✔
+- Automatic fire: one persistent press produces a multi-round stream (≥3 rounds within an 8 s deadline, ≤20 cadence ceiling); exact per-round rate is frame-bound in batch (~5 FPS) and is covered by the direct cadence test. ✔
+- Hitscan vs a real spawned runner (3.5 m): sanity ray strikes the target, one shot consumes exactly 1 round, HP drops by exactly 10, runner survives. ✔
+- Held burst vs a real spawned brute (3 m): sanity ray strikes it, repeated `OnEnemyDamaged` hits (≥2), ammo−hits ≤ 3, each hit applies exactly 10 damage, brute survives, ammo never negative. ✔
+- Limited ammo: SetAmmo(1) runs to exactly 0 and stays there while held, 0-ammo `Fire()`/`CanFire()` no-op. ✔
+- No production-code changes required — the existing Assault Rifle implementation passed.
+
+Also fixed/decided this milestone (test-infra robustness, no gameplay change):
+
+- PlayMode batchmode here runs at only ~5–8 FPS (~0.7 s of game time per 1.2 real s, ~6 frames), so fixed real-time hold windows flake for fast weapons (rifle nominal 12 rounds/1.2 s was impossible; measured 3, and 0.9 s holds sometimes produced only 1). The two rifle hold tests now hold until a target round/hit count lands (8 s deadline) instead of asserting a range over a fixed window; the exact 0.1 s gate stays covered by the direct-CanFire test. Recorded in `DECISIONS.md`.
+- `SpawnFrozenTarget` became deterministic: `DestroyImmediate` of a target's `NavMeshAgent` makes `WaveManager.EnableNavMeshAgent` exit at its null guard (it used to re-snap the transform onto the floor after spawn, dropping the collider below the eye ray), the brute mirrors its production scale-2 hitbox, the floor-aligned root is lifted 1.6 m to span the eye height, and `Physics.SyncTransforms()` is called because a static collider does not follow `transform.position` until the next physics step (the sanity ray once saw the brute's collider still at its original spawn point). Recorded in `DECISIONS.md`.
 
 ## Milestone 9 — Chainsaw
 
@@ -303,8 +320,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 8 — Assault Rifle** (also in scope afterwards: individual weapon verification, M10+ enemy framework/waves).
-Milestones 1–7 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9).
+Next milestone to start: **Milestone 9 — Chainsaw** (also in scope afterwards: M10+ enemy framework/waves).
+Milestones 1–8 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7).
 
-Milestones 7–14 gameplay code already exists and compiles but is **unverified by tests**; each still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
+Milestones 8–14 gameplay code already exists and compiles; weapons 8 has been verified by tests, but M9–M14 still need their PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
 After completing each milestone, update this file and commit the result.

@@ -201,3 +201,23 @@ This file records consequential choices that are intentionally left open by `GAM
 **Alternatives considered:** Moving the runner detection range to 30 u or moving corridor spawn points closer — rejected, that changes gameplay/level to satisfy a test; picking the farthest arena runner — rejected, the corridor runner is the most distant and stays undetected (moved=0.00).
 
 **Impact:** The test now measures a wave enemy demonstrably in its chase phase, so the "wave enemies move toward the player" requirement is verified deterministically while simple Level-1 AI (per-enemy detection ranges) remains untouched. NavigationValidationTests re-verified 3/3 in isolation and 3/3 in the full 35-test suite.
+
+### 2026-09-15 — Assault Rifle hold tests: deadline-based holds instead of fixed real-time windows
+
+**Decision:** The two M8 hold tests no longer hold the fire button for a fixed real-time window and assert a round-count range. `AssaultRifle_Fire_Hold_AutomaticStreamMatchesHighCadence` holds until ≥3 rounds are consumed (8 s real-time deadline) and asserts consumed ∈ [3,20]; `AssaultRifle_Hold_SpawnedEnemy_TakesRepeatedDamageAndAmmoDrainsPerShot` holds until ≥2 `OnEnemyDamaged` events land on a 3 m brute (8 s deadline) and asserts ≥2 hits, ammo−hits ≤ 3, and HP drop == hits × damage. The exact 0.1 s cadence remains verified frame-independently by the direct-CanFire cadence test.
+
+**Reason:** PlayMode batchmode in this environment runs at only ~5–8 FPS. A 1.2 s real-time hold advances ~6 frames and ~0.70 s of game time, so the rifle's realized automatic rate is frame-bound, not cadence-bound, AND erratic: measured 3 rounds in one 1.2 s hold but only 1 round in a 0.9 s hold. Fixed-window assertions (originally [6,14] at nominal 12) therefore flaked deterministically. Deadline-based holds assert the actual contracts — a single persistent press produces a multi-round stream, and a continuous hold lands repeated damage with ammo==hits — without depending on how many frames the scheduler delivers.
+
+**Alternatives considered:** Fixed windows tuned lower (e.g. [2,14]) — still bound to an unpredictable frame count per wall-clock window and re-flaked exactly that way (1 consumed in 0.9 s); temporarily raising Unity's target frame rate in tests — rejected, does not survive batchmode throttling and would mask rather than measure the input path.
+
+**Impact:** Hold-path assertions are frame-rate independent and deterministic across isolation and full-suite runs. Per-test intent (auto-fire, repeated damage, cadence ceiling) is preserved; precise cadence coverage lives in the direct CanFire test.
+
+### 2026-09-15 — Frozen-test-target placement: neutralize the nav coroutine and sync physics
+
+**Decision:** `SpawnFrozenTarget` (used by the rifle hitscan/hold tests) now (1) `DestroyImmediate`s the spawned enemy's `NavMeshAgent` so the `WaveManager.EnableNavMeshAgent` coroutine exits at its null guard instead of re-snapping the transform onto the floor ~0.1 s later, (2) mirrors the Brute's production scale-2 hitbox by setting `localScale = 2` for `"brute"` (its `TankBrute.Start` never runs on a disabled component), (3) lifts the floor-aligned root ~1.6 m so the collider spans the 1.33 m camera eye, and (4) calls `Physics.SyncTransforms()` after teleporting.
+
+**Reason:** Two independent root causes made the first draft deterministic failures. First, a collider on a non-rigidbody object does not follow `transform.position` until the next physics step — the sanity raycast saw the brute's collider still at its original spawn point (bounds center (-10.00, 0.33, 10.00)) while the transform sat at (0.00, 1.33, 3.00) directly on the camera ray, so the ray passed through to the far wall. Second, the WaveManager nav coroutine re-snaps spawned enemies onto the floor, which drops even a synced scale-1 collider below the eye ray (capsule top ≈ 1.33 m — a coin-flip grazing hit, explaining the runner test's intermittent pass/fail).
+
+**Alternatives considered:** Teleporting after the coroutine completes (0.3 s wait) — still racy because the coroutine can re-enable the agent and fight the teleport; keeping `agent.enabled = false` — the coroutine re-enables it itself. `DestroyImmediate` + null-guard exit is the only deterministic neutralization and produces no console warning.
+
+**Impact:** Enemy hitscan/hold tests now hit their target deterministically in every run (sanity always raycasts the brute, not the wall). The change is confined to the shared test helper; production gameplay is untouched.
