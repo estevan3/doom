@@ -4,7 +4,6 @@ using DoomClone.Automation;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.TestTools;
 
 namespace DoomClone.Tests.PlayMode
@@ -12,8 +11,8 @@ namespace DoomClone.Tests.PlayMode
     /// <summary>
     /// M4 — Player + HUD PlayMode verification per GAME_SPEC.md §2 and
     /// TEST_PLAN.md "Player" section. Uses direct InputSystem event injection
-    /// (not InputTestFixture) so the game's DontDestroyOnLoad PlayerInputActions
-    /// stays intact across test restarts.
+    /// through TestInputDevices (not InputTestFixture) so the game's
+    /// DontDestroyOnLoad PlayerInputActions stays intact across test restarts.
     /// </summary>
     public class PlayerTests
     {
@@ -22,37 +21,13 @@ namespace DoomClone.Tests.PlayMode
         static readonly string TestResultsDir =
             Path.Combine(Directory.GetCurrentDirectory(), "TestResults");
 
-        static Keyboard s_Keyboard;
-        static Mouse s_Mouse;
+        static void EnsureInputDevices() => TestInputDevices.EnsureDevices();
 
-        static void EnsureInputDevices()
-        {
-            if (s_Keyboard == null)
-                s_Keyboard = InputSystem.AddDevice<Keyboard>("TestKeyboard");
-            if (s_Mouse == null)
-                s_Mouse = InputSystem.AddDevice<Mouse>("TestMouse");
-        }
+        static void PressKeys(params Key[] keys) => TestInputDevices.PressKeys(keys);
 
-        static void PressKeys(params Key[] keys)
-        {
-            var state = new KeyboardState();
-            for (int i = 0; i < keys.Length; i++)
-                state.Set(keys[i], true);
-            InputSystem.QueueStateEvent(s_Keyboard, state);
-            InputSystem.Update();
-        }
+        static void ReleaseAllKeys() => TestInputDevices.ReleaseAllKeys();
 
-        static void ReleaseAllKeys()
-        {
-            InputSystem.QueueStateEvent(s_Keyboard, new KeyboardState());
-            InputSystem.Update();
-        }
-
-        static void SetMouseDelta(Vector2 delta)
-        {
-            InputSystem.QueueStateEvent(s_Mouse, new MouseState { delta = delta });
-            InputSystem.Update();
-        }
+        static void SetMouseDelta(Vector2 delta) => TestInputDevices.SetMouseDelta(delta);
 
         [UnitySetUp]
         public IEnumerator Setup()
@@ -161,9 +136,11 @@ namespace DoomClone.Tests.PlayMode
             yield return GameBootstrap.WaitUntil(() => cc.isGrounded, 5f);
             float beforeY = player.transform.position.y;
 
-            // Press space for 1 frame
+            // Press space for a few frames so the queued input event is always
+            // consumed by at least one PlayerController.Update (batch FPS varies).
             PressKeys(Key.Space);
-            yield return null;
+            for (int hold = 0; hold < 3; hold++)
+                yield return null;
             ReleaseAllKeys();
 
             // Wait for jump apex (a few frames)

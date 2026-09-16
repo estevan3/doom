@@ -30,11 +30,11 @@ public class ZombieRunner : Enemy
         if (distanceToPlayer <= attackRange)
         {
             Attack();
-            agent.SetDestination(transform.position);
+            TrySetDestination(transform.position);
         }
         else
         {
-            agent.SetDestination(player.position);
+            TrySetDestination(player.position);
         }
     }
 }

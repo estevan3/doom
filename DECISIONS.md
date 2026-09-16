@@ -141,3 +141,33 @@ This file records consequential choices that are intentionally left open by `GAM
 **Alternatives considered:** Accepting flaky MCP runs and relying on `tools/test.sh` CLI only (same TestRunner under the hood — would hit the same symptom in batchmode).
 
 **Impact:** Reliable PlayMode verification through MCP `tests-run`; entering Play Mode now reloads domain/scene as default Unity behavior.
+
+### 2026-09-15 — Weapon slot ordering: hotkey index == slot index, Pistol default
+
+**Decision:** `WeaponManager.InitializeWeapons` now builds `weapons = [Pistol, Shotgun, AssaultRifle, Chainsaw]` so slot index `i` equals hotkey `i + 1`, and `GameTestAPI` weapon constants were renumbered (`WeaponPistol = 0` … `WeaponChainsaw = 3`). Pistol is the default/fallback weapon at slot 0 (boot `EquipWeapon(0)`).
+
+**Reason:** GAME_SPEC §3 lists the weapons without mandating an order but §3.2 calls the Pistol the "fallback/default weapon" and §2 keys `1`–`4` switch weapons. A 1=1 mapping where Pistol — the fallback — sits on key `1` is the least-surprising old-school arrangement and makes `index == hotkey − 1` a testable contract. The pre-existing code had `[Chainsaw, Pistol, Shotgun, AssaultRifle]` (Chainsaw on key `1`), contradicting the Pistol-is-default reading.
+
+**Alternatives considered:** Keeping the old array order and adding an explicit slot→hotkey remap. Rejected — an indirection table adds code for no gameplay benefit; tests then verify the table, not the contract.
+
+**Impact:** Verified by `Weapon_Framework_ManagerOwnsAllFourWeapons` (slot types in order), `Weapon_Switch_Keys1To4_SelectExpectedWeapon` (keys `1`–`4`), and `Weapon_Boot_DefaultsToPistol`. Affects any code that relied on the old constant values (only the automation/test layer did).
+
+### 2026-09-15 — Shared `TestInputDevices` helper for PlayMode input injection
+
+**Decision:** The synthetic `TestKeyboard`/`TestMouse` device management was extracted from `PlayerTests` into a shared static helper `TestInputDevices` (`Assets/Game/Tests/PlayMode/TestInputDevices.cs`). `EnsureDevices()` is idempotent: it keeps exactly ONE synthetic Keyboard and ONE Mouse, scanning `InputSystem.devices` first (reusing survivors) and removing any duplicates leaked by earlier sessions.
+
+**Reason:** M4's input-injection decision added a synthetic device pair per run. `AddDevice` devices are never reaped automatically and survive domain reloads, so each PlayMode test run added another pair; the game's actions bind to the first pair while later runs injected into later pairs, silently killing input assertions from run two onward. The M4 suite passed only because the first run was clean; M5's much larger suite exposed the leak.
+
+**Alternatives considered:** `InputTestFixture` (rejected in M4 — destroys the game's `DontDestroyOnLoad` `PlayerInputActions` singleton); resetting `InputSystem` via `InputSystem.ResetDevice` per test (rejected — noisier than dedup).
+
+**Impact:** Repeated PlayMode runs remain deterministic (verified by running the full 29-test suite via MCP after the helper existed — all input-driven weapon/player assertions still green on a second run). Also made the M4 jump test hold Space for 3 frames so the queued event is always consumed by at least one `PlayerController.Update` (batch FPS varies).
+
+### 2026-09-15 — Enemy `TrySetDestination` defense-in-depth for placement races
+
+**Decision:** Added `Enemy.TrySetDestination(Vector3)` and switched all three enemy subclasses (`ZombieRunner`, `RangedSoldier`, `TankBrute`) to route every `agent.SetDestination` through it. It returns `false` (never throws) when the agent is null, disabled, or not on a valid NavMesh.
+
+**Reason:** M5 firing tests hold the attack button for ~1 s per weapon against real geometry while Wave 1 enemies spawn and chase the player — exactly the window where an agent can be enabled-but-not-yet-placed (M3 `EnableNavMeshAgent` waits for the bake then warps, but the transform can still be mid-snap and `agent.enabled`/`isOnNavMesh` intermediate). An unplaced-agent `SetDestination` throws at runtime; the weapon test path must stay exception-free. This is the same defensive condition the subclasses already check (`!agent.enabled || !agent.isOnNavMesh` → return), generalized to the call site so no future `SetDestination` reintroduces the race.
+
+**Alternatives considered:** Keeping direct calls (the per-subclass guard already covers current code) — rejected because it leaves the invariant implicit and easy to break in a future enemy; disposing of the try/catch — kept, since a non-walkable destination on a valid agent is a legitimate "cannot path this frame", not an error to surface.
+
+**Impact:** Firing-at-wall weapon tests and wave-spawn windows run exception-free. No gameplay behavior changes for fully-placed agents (`SetDestination` still called with the same destinations).

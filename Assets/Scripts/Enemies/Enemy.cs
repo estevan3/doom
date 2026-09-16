@@ -62,6 +62,19 @@ public abstract class Enemy : MonoBehaviour
         }
     }
 
+    protected bool TrySetDestination(Vector3 destination)
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh) return false;
+        try
+        {
+            return agent.SetDestination(destination);
+        }
+        catch (System.Exception)
+        {
+            return false;
+        }
+    }
+
     protected abstract void HandleBehavior(float distanceToPlayer);
 
     public virtual void TakeDamage(int damage)

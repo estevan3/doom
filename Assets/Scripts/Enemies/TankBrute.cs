@@ -70,7 +70,7 @@ public class TankBrute : Enemy
         }
         else
         {
-            agent.SetDestination(player.position);
+            TrySetDestination(player.position);
         }
     }
 
@@ -78,7 +78,7 @@ public class TankBrute : Enemy
     {
         isTelegraphing = true;
         telegraphTimer = telegraphDuration;
-        agent.SetDestination(transform.position);
+        TrySetDestination(transform.position);
     }
 
     void FinishTelegraph()

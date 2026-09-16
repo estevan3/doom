@@ -25,10 +25,10 @@ public class WeaponManager : MonoBehaviour
         }
 
         weapons = new Weapon[4];
-        weapons[0] = gameObject.AddComponent<Chainsaw>();
-        weapons[1] = gameObject.AddComponent<Pistol>();
-        weapons[2] = gameObject.AddComponent<Shotgun>();
-        weapons[3] = gameObject.AddComponent<AssaultRifle>();
+        weapons[0] = gameObject.AddComponent<Pistol>();
+        weapons[1] = gameObject.AddComponent<Shotgun>();
+        weapons[2] = gameObject.AddComponent<AssaultRifle>();
+        weapons[3] = gameObject.AddComponent<Chainsaw>();
 
         foreach (Weapon w in weapons)
         {

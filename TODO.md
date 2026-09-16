@@ -146,15 +146,24 @@ Editor test-infra fix (project setting):
 
 ## Milestone 5 — Weapon framework
 
-- [~] Implement base `Weapon`.
-- [~] Implement weapon switching 1–4 (`WeaponManager`).
-- [~] Implement common firing/impact feedback.
-- [ ] Add weapon tests.
+- [x] Implement base `Weapon`.
+- [x] Implement weapon switching 1–4 (`WeaponManager`).
+- [x] Implement common firing/impact feedback.
+- [x] Add weapon tests.
 
-Acceptance:
+Acceptance (verified 2026-09-15, full PlayMode suite 29/29 + WeaponFrameworkTests 10/10):
 
-- Player can equip each weapon. Code exists; not run-verified.
-- HUD reflects equipped weapon. Code exists; not run-verified.
+- Player can equip each weapon. ✔ (keys 1–4 + `EquipWeapon` API; exactly one weapon enabled at a time.)
+- HUD reflects equipped weapon and ammo. ✔ (`Weapon: Pistol/Shotgun/Assault Rifle/Chainsaw`, `Ammo: 999/50/120/Infinite`; `SetAmmo` → `OnAmmoChanged` → HUD.)
+- Base weapon contract verified across all four. ✔ (ownership/enumeration/name, ammo flags + full start mags, boot default Pistol, `SetAmmo` clamps 0..maxAmmo and fires the event exactly once.)
+- Firing/impact feedback runs without exceptions at a wall. ✔ (hold fire at real geometry through the production input path for all four weapons; ammo consumed / Chainsaw stays 0.)
+- 0-ammo gating: ammo runs to exactly 0, never negative, `CanFire()` false. ✔
+
+Also fixed/decided this milestone:
+
+- Weapon slot ordering is NOT the old `[Chainsaw, Pistol, Shotgun, AssaultRifle]` array. Slot == hotkey − 1 now: `[Pistol, Shotgun, AssaultRifle, Chainsaw]`, Pistol the default/fallback (GAME_SPEC §3.2). `GameTestAPI` constants renumbered to match. Recorded in `DECISIONS.md`.
+- Shared `TestInputDevices` helper extracted from PlayerTests; it dedupes synthetic Keyboard/Mouse devices so repeated PlayMode runs cannot leak extra pairs (input stopped reaching the game's actions from run two onward). Recorded in `DECISIONS.md`.
+- Enemy `TrySetDestination` added as defense-in-depth: no `SetDestination` is ever called while an agent is disabled/not on NavMesh (spawn-vs-bake race path), keeping firing-at-wall holds exception-free. Recorded in `DECISIONS.md`.
 
 ## Milestone 6 — Pistol
 
@@ -266,8 +275,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 4 — Player + HUD**.
-Milestones 1, 2, and 3 are complete and verified (automation foundation; level blockout with spec spawn tags; Navigation with runtime-baked NavMesh, spawn-point usability, and the `SetDestination` spawn/bake race fixed). Milestone 3 verification: EditMode 3/3, PlayMode 6/6 (incl. 3 navigation tests — bake+path, automation-spawned enemy placement/movement, Wave-1 enemy placement/movement); console clean of `SetDestination` errors in the tested path.
+Next milestone to start: **Milestone 6 — Pistol** (also in scope afterwards: M7–M9 individual weapon verification, M10+ enemy framework/waves).
+Milestones 1–5 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10).
 
-Milestones 4–14 gameplay code already exists and compiles but is **unverified by tests**; each still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
+Milestones 6–14 gameplay code already exists and compiles but is **unverified by tests**; each still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
 After completing each milestone, update this file and commit the result.

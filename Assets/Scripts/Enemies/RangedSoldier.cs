@@ -40,11 +40,11 @@ public class RangedSoldier : Enemy
 
         if (distanceToPlayer < preferredDistance - 2f)
         {
-            agent.SetDestination(transform.position - directionToPlayer * 3f);
+            TrySetDestination(transform.position - directionToPlayer * 3f);
         }
         else if (distanceToPlayer > preferredDistance + 2f)
         {
-            agent.SetDestination(player.position);
+            TrySetDestination(player.position);
         }
         else
         {
@@ -53,7 +53,7 @@ public class RangedSoldier : Enemy
                 strafeDirection = Random.value > 0.5f ? transform.right : -transform.right;
                 nextStrafeChange = Time.time + 1.5f;
             }
-            agent.SetDestination(transform.position + strafeDirection * strafeSpeed);
+            TrySetDestination(transform.position + strafeDirection * strafeSpeed);
         }
 
         if (distanceToPlayer <= attackRange)

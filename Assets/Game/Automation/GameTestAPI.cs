@@ -13,10 +13,10 @@ namespace DoomClone.Automation
     {
         public const string LevelSceneName = "DoomClone_Level01";
 
-        public const int WeaponChainsaw = 0;
-        public const int WeaponPistol = 1;
-        public const int WeaponShotgun = 2;
-        public const int WeaponAssaultRifle = 3;
+        public const int WeaponPistol = 0;
+        public const int WeaponShotgun = 1;
+        public const int WeaponAssaultRifle = 2;
+        public const int WeaponChainsaw = 3;
 
         public const string ScenarioFreshLevel = "fresh_level";
 
