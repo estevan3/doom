@@ -296,11 +296,24 @@ Acceptance (verified 2026-09-16, full PlayMode suite 66/66 + EditMode 7/7, Runne
 
 ## Milestone 12 — Ranged Soldier
 
-- [~] Implement ideal range behavior.
-- [~] Implement ranged attack.
-- [~] Implement simple strafing/repositioning.
-- [~] Add distinct visual (capsule + material color).
-- [ ] Add tests.
+- [x] Implement ideal range behavior.
+- [x] Implement ranged attack.
+- [x] Implement simple strafing/repositioning.
+- [x] Add distinct visual (capsule + material color).
+- [x] Add tests (`Assets/Game/Tests/PlayMode/RangedSoldierTests.cs`, 5 tests).
+
+Acceptance (verified 2026-09-16, full PlayMode suite 71/71 + EditMode 7/7, RangedSoldierTests 5/5):
+
+- Config distinctness: medium HP (60 > runner 30 < brute 200), medium speed (3.5 < runner 5 > brute 1.5), medium damage (12 > runner 8 < brute 25), slowest-medium cadence (1.5 s between runner 0.8 and brute 2.5), LONG ranged attack (25 m) versus runner/brute melee ~1.8–2.5 m — behavioral difference, not just statistics. ✔
+- Ranged attack: a soldier kept inside its 25 m attack range repeatedly connects (≥2 hits) at the 1.5 s interval cadence, each hit dealing exactly the configured 12 damage from beyond melee distance (hits determined by player-health deltas; no hit comes from closer than 6 m). ✔
+- Ideal-range behavior: a soldier parked too close (8 m < the 10 m back-off threshold) backs off and holds the preferred band instead of rushing into melee. ✔
+- Strafe/repositioning: a soldier parked at the preferred distance (12 m, inside the [10, 14] strafe band) moves laterally with meaningful horizontal displacement while never closing below ~4 m or fleeing past ~16 m. ✔
+- Distinct visual: orange capsule material (`Color(1, 0.6, 0)` set in `Start`), explicitly contrasted against runner green and brute dark red. ✔
+- Runtime visual evidence: `TestResults/ranged_soldier_milestone.png` captured exception-free during the suite.
+
+Defect found & fixed at root cause (production change required):
+
+- **Ranged Soldier hitscan could NEVER connect.** `RangedSoldier.Attack()` computed its ray direction from the transform ROOT toward `player.position + Vector3.up`, but launched the ray from `transform.position + Vector3.up` — one meter higher. On flat NavMesh ground the ray therefore crossed the player's vertical line at `player.y + 2`, exactly 1 m above the CharacterController capsule top (`player.y + 1`): the ray passed cleanly over the player. An initial fix that aimed at `player.position + Vector3.up` from the raised origin put the ray exactly ON the capsule's top rim (a tangent graze) — still a coin-flip miss. Final fix: aim from the ray origin straight at the player's capsule CENTER (`direction = (player.position - origin).normalized`), which crosses the capsule body solidly at every engagement distance. This was caught by `Soldier_RangedAttack_HitsPlayerAtDistanceBeyondMelee_AtIntervalCadence` (hits=0 over the full window before the fix; passes 5/5 and 71/71 after). Full detail in `DECISIONS.md`.
 
 ## Milestone 13 — Brute (`TankBrute`)
 
@@ -355,8 +368,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 12 — Ranged Soldier (`RangedSoldier`)** dedicated behavior tests, then M13 (Brute `TankBrute`) and M14 (WaveManager timing tests).
-Milestones 1–11 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4). M11: Runner — rapid direct chase, fast melee cadence + configured damage, distinct green visual (EditMode 7/7, PlayMode 66/66, RunnerEnemyTests 4/4).
+Next milestone to start: **Milestone 13 — Brute (`TankBrute`)** dedicated behavior tests, then M14 (WaveManager timing tests).
+Milestones 1–12 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4). M11: Runner — rapid direct chase, fast melee cadence + configured damage, distinct green visual (EditMode 7/7, PlayMode 66/66, RunnerEnemyTests 4/4). M12: Ranged Soldier — ideal-range back-off, strafe band, 25 m ranged hitscan at 1.5 s cadence, distinct orange visual; production defect fixed (hitscan ray aimed 1 m over the player's head — now aims at the capsule center) (EditMode 7/7, PlayMode 71/71, RangedSoldierTests 5/5).
 
-Milestones 12–14 gameplay code already exists and compiles; M10 (base framework) and M11 (Runner) have been verified by tests, M12–M14 (Ranged Soldier, Brute, WaveManager timing) still need their dedicated PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
+Milestones 13–14 gameplay code already exists and compiles; M10 (base framework), M11 (Runner), and M12 (Ranged Soldier) have been verified by tests, M13 (Brute) and M14 (WaveManager timing) still need their dedicated PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
 After completing each milestone, update this file and commit the result.

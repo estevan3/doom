@@ -291,3 +291,19 @@ This file records consequential choices that are intentionally left open by `GAM
 **Alternatives considered:** Driving the runner from an arena spawn point (corridor spawns sit beyond the 25 m detection range, respawn points are at random composition); measuring fixed 2 s windows (rejected — at ~1–8 FPS batch frame cadence these are unreliable); a test-only `StopAllCoroutines`/wave-freeze (rejected — bypasses real systems).
 
 **Impact:** All four M11 tests pass deterministically in isolation (4/4) and in the full suite (66/66). No production code was changed for M11 — the existing `ZombieRunner` passed as-is, confirming the M10-era config (30 HP / 8 dmg / 0.8 s cadence / 5 speed / 1.8 m range / green material).
+
+### 2026-09-16 — M12 Ranged Soldier hitscan aimed at the capsule center from the ray origin
+
+**Decision:** `RangedSoldier.Attack()` now computes the hitscan ray as:
+
+```csharp
+Vector3 origin = transform.position + Vector3.up;
+Vector3 direction = (player.position - origin).normalized;
+Ray ray = new Ray(origin, direction);
+```
+
+**Reason:** The soldier's hitscan **could never connect**. The old code computed the direction from the transform ROOT to `player.position + Vector3.up` but launched the ray from `transform.position + Vector3.up` — one meter higher. On flat NavMesh ground (soldier root at navmesh Y, player capsule top at `player.y + 1`) the ray crossed the player's vertical line at `player.y + 2`, exactly 1 m above the capsule top, so `Physics.Raycast` returned nothing at any engagement distance within `attackRange`. This violates GAME_SPEC §4.2 (the Ranged Soldier must "can damage the player when its attack connects") and was caught by `Soldier_RangedAttack_HitsPlayerAtDistanceBeyondMelee_AtIntervalCadence`, which measured hits=0 over the full 25 s window. The first attempted fix kept `+ Vector3.up * 1f` as the aim point, which put the ray exactly ON the capsule's top hemisphere — a tangent graze and still a coin-flip miss. Aiming straight at `player.position` (the CharacterController center) from the raised origin makes the ray cross the capsule body solidly regardless of NavMesh Y, soldier closeness, or small elevation differences.
+
+**Alternatives considered:** Dropping the `+ Vector3.up` from the origin entirely (aim from the feet) — rejected, the raised origin keeps the shot visually coming from the soldier's body; leaving the tangent aim — rejected, deterministic miss-by-graze; a projectile instead of hitscan — rejected, hitscan is the spec's first-listed option and the test hard-asserts hit-delta detection on the real `TakeDamage` path.
+
+**Impact:** Ranged Soldiers now actually damage the player at range. `RangedSoldierTests` 5/5 and the full PlayMode suite 71/71 verified after the fix. This is the first gameplay-harming production defect found by a dedicated per-type milestone test (M11 runner needed no production change).

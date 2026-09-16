@@ -68,11 +68,12 @@ public class RangedSoldier : Enemy
         if (Time.time < nextAttackTime) return;
         nextAttackTime = Time.time + attackRate;
 
-        Vector3 direction = (player.position + Vector3.up * 1f - transform.position).normalized;
+        Vector3 origin = transform.position + Vector3.up;
+        Vector3 direction = (player.position - origin).normalized;
 
-        Debug.DrawRay(transform.position + Vector3.up, direction * attackRange, Color.orange, 0.2f);
+        Debug.DrawRay(origin, direction * attackRange, Color.orange, 0.2f);
 
-        Ray ray = new Ray(transform.position + Vector3.up, direction);
+        Ray ray = new Ray(origin, direction);
         RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit, attackRange))
