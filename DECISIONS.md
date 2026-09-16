@@ -271,3 +271,13 @@ This file records consequential choices that are intentionally left open by `GAM
 **Alternatives considered:** Fixed larger window (still frame-count bound); basing the wave-move guarantee on pre-arrival spawn-time measurement only (weaker, couples acceptance to wave-1 composition internals).
 
 **Impact:** The "wave enemies navigate toward the player" acceptance is frame-rate independent and not confounded by arrival standstill.
+
+### 2026-09-16 — Wave-enemy test helper patterns: wave-assignment gate + synchronous clear, delta-detection for base-Attack, `SpawnEnemyByType` isolation
+
+**Decision:** `EnemyFrameworkTests` use these deterministic patterns: (1) before killing wave enemies the test waits until `WaveManager.GetEnemiesAlive() > 0` (that value is only written AFTER the `SpawnWave` composition loop finishes, so it proves the wave was fully assigned) and then keeps every have-your-sole-block-clear/aux-kill/assert statement fully synchronous (`yield`-free) so the 5 s post-clear wave cooldown can never spawn an interfering wave mid-scenario; (2) the base-`Attack`→player-damage proof measures `playerHealth` deltas across the attack tick rather than absolute pinning, since stray wave damage can land in the same window (kept negligible by healing the player to 100 before the close-range encounter); (3) the `SpawnEnemyByType` auxiliary test asserts `trackedEnemiesAlive == 0` after `StartFreshLevel`, spawns/types/dies one enemy at a time, and — because wave-1 timing (2 s) is never deterministic in batch — keeps the whole spawn-and-death sequence synchronous so `enemiesAlive` can only change via the death callback, proving the aux-not-tracked contract (DECISIONS 2026-09-14) exactly.
+
+**Reason:** PlayMode batchmode here runs at ~1–8 FPS with non-deterministic wave timing, and wave-1 enemies can reach/reposition the player during long waits. The gate-plus-synchronous-block pattern makes alive-count and cooldown assertions deterministic without touching production timing (2 s / 5 s stay exactly as spec'd).
+
+**Alternatives considered:** Firing `WaveManager.StopAllCoroutines` / disabling agent components to freeze wave timing — rejected, bypasses real systems; killing enemies before the gate (alive count can be 0 pre-spawn, making asserts vacuous); asserting absolute player HP after a melee hit — rejected, stray wave damage made it flaky until the synchronous-delta approach.
+
+**Impact:** All six M10 PlayMode tests pass deterministically; the pattern is the template for M11–M14 per-type behavior and WaveManager timing tests.

@@ -261,12 +261,23 @@ Also fixed this milestone (test-fixture robustness, no gameplay change):
 
 ## Milestone 10 — Enemy framework
 
-- [~] Implement base `Enemy`.
-- [~] Implement health/death.
-- [~] Implement common damage to player.
-- [~] Implement NavMeshAgent integration.
-- [~] Implement death notification contract for `WaveManager`.
-- [ ] Add base enemy tests.
+- [x] Implement base `Enemy`.
+- [x] Implement health/death.
+- [x] Implement common damage to player.
+- [x] Implement NavMeshAgent integration.
+- [x] Implement death notification contract for `WaveManager`.
+- [x] Add base enemy tests.
+
+Acceptance (verified 2026-09-16, full PlayMode suite 62/62 + EditMode 7/7, EnemyFrameworkTests 6/6):
+- `Assets/Game/Tests/EditMode/EnemyFrameworkEditModeTests.cs` (M10, 4/4): base `Enemy` is an abstract MonoBehaviour in `DoomClone.Runtime`; contract surface = `CurrentHealth`/`IsDead`/`Die`/`TakeDamage`/`OnEnemyDamaged`/`OnEnemyDeath`/`Attack`/`TrySetDestination`; exactly three concrete subclasses in the runtime assembly.
+- Config test proves the three types differ behaviorally, not just statistically: HP 30<60<200, speed 5>3.5>1.5, damage 8<12<25, cadence 0.8<1.5<2.5, soldier ranged 25 m vs melee ~2–3 m, brute 0.5 s telegraph + 30-slam + scale-2 hitbox.
+- Death: lethal damage fires `OnEnemyDeath` exactly once (HP ≤ 0), dead enemy fully leaves the living set, `DeathSequence` destroys the GameObject, `WaveManager.enemiesAlive` decrements exactly once, and a single non-final death does not end the wave.
+- `SpawnEnemyByType` auxiliaries: spawn AND death leave `trackedEnemiesAlive`/`currentWave`/`waveInProgress` untouched — the declar(2026-09-14) auxiliary-not-tracked contract holds.
+- Navigation: all three types place on the NavMesh via `WaveManager.EnableNavMeshAgent` (no `SetDestination` errors) and chase the player once inside detection range.
+- Common damage path: base `Enemy.Attack()` → `PlayerController.TakeDamage(attackDamage)` connects at melee range and deals exactly the configured runner damage (8).
+- Death smoke: spawn all three types + a small wave, kill & observe zero exceptions and reverted living count.
+- No gameplay defects found — the existing `Enemy`/`ZombieRunner`/`RangedSoldier`/`TankBrute` passed M10 as-is (M11–M13 keep their own dedicated behavior tests pending). Verified from source that `Enemy.Awake` (HP + `NavMeshAgent`) runs correct, `Die()` is exactly-once, and `RangedSoldier.preferredDistance` is a RangedSoldier member (not base).
+- No blocking console errors (only known graphicsApiMask + Blender noise; pre-existing obsolete `FindObjectsByType` test warnings keep existing suite style).
 
 ## Milestone 11 — Runner (`ZombieRunner`)
 
@@ -336,8 +347,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 10 — Enemy framework** (Runner/Soldier/Brute behavior + base `Enemy` tests, then M14 WaveManager timing tests).
-Milestones 1–9 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5).
+Next milestone to start: **Milestone 11 — Runner (`ZombieRunner`)** dedicated behavior tests, then M12 (Ranged Soldier), M13 (Brute `TankBrute`), and M14 (WaveManager timing tests).
+Milestones 1–10 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4).
 
-Milestones 8–14 gameplay code already exists and compiles; weapons M8–M9 have been verified by tests, M10–M14 (enemy framework/behavior + WaveManager timing) still need their PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
+Milestones 11–14 gameplay code already exists and compiles; M10 (base framework) has been verified by tests, M11–M14 (per-type behavior + WaveManager timing) still need their dedicated PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
 After completing each milestone, update this file and commit the result.
