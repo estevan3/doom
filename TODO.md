@@ -190,12 +190,25 @@ Also fixed this milestone (test-infra robustness, no gameplay change):
 
 ## Milestone 7 — Shotgun
 
-- [~] Implement 6–8 pellet hitscan behavior.
-- [~] Implement close-range damage.
-- [~] Implement slow cadence.
-- [~] Implement limited ammo.
-- [~] Implement reload behavior.
-- [ ] Add tests.
+- [x] Implement 6–8 pellet hitscan behavior.
+- [x] Implement close-range damage.
+- [x] Implement slow cadence.
+- [x] Implement limited ammo.
+- [x] Implement reload behavior.
+- [x] Add tests.
+
+Acceptance (verified 2026-09-15, full PlayMode suite 44/44 + EditMode 3/3, ShotgunTests 9/9):
+
+- Config matches spec: 8 pellets (within the required 6–8), 5° cone, 0.8 s cadence, 50 shells (scarcer than the pistol's 999), 2.0 s block reload, point-blank blast = 8×8 = 64 damage (≫ pistol 15). ✔
+- One direct `Fire()` consumes exactly 1 shell and raises `OnAmmoChanged` exactly once. ✔
+- Point-blank full hit vs a spawned TankBrute (200 HP): exactly 8 pellet `OnEnemyDamaged` events, HP drops by exactly 64. ✔
+- Cone verified at real geometry: one shot produces exactly `pelletCount` distinct impact spheres, spread across 5° fan. ✔
+- Cadence: immediate refire blocked until `fireRate` elapses; gate reopens within [0.7, 1.3] s (0.8 nominal). ✔
+- Input-path hold (1.6 s) respects slow cadence: 1–3 shells consumed, ammo never negative. ✔
+- Ammo: SetAmmo(2) clamp, runs to exactly 0, `Fire()`/`CanFire()` no-op at 0, never negative. ✔
+- Block reload: `StartReload` sets `IsReloading`, blocks fire, duration in [1.85, 2.5] s (2.0 nominal), restores magazine to 50. ✔
+- Real input path: R key triggers block reload via the production `reloadAction` binding; HUD reflects `Ammo: 50`. ✔
+- No production-code changes required — the existing Shotgun implementation passed. One compile fix in the test (see DECISIONS.md).
 
 ## Milestone 8 — Assault Rifle
 
@@ -290,8 +303,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 7 — Shotgun** (also in scope afterwards: M8–M9 individual weapon verification, M10+ enemy framework/waves).
-Milestones 1–6 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6).
+Next milestone to start: **Milestone 8 — Assault Rifle** (also in scope afterwards: individual weapon verification, M10+ enemy framework/waves).
+Milestones 1–7 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9).
 
 Milestones 7–14 gameplay code already exists and compiles but is **unverified by tests**; each still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
 After completing each milestone, update this file and commit the result.

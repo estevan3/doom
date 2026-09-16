@@ -182,6 +182,16 @@ This file records consequential choices that are intentionally left open by `GAM
 
 **Impact:** The hitscan-damage assertion is deterministic across load conditions. Later per-weapon milestones (shotgun/rifle) should use the same pattern: direct `Fire()` for exact per-shot state assertions, input-path holds with loose windows for cadence/auto-fire behavior.
 
+### 2026-09-15 — Shotgun M7 verification: pellet counting and impact-trace tracking
+
+**Decision:** M7's shotshell-pellet tests count pellet hits two deterministic ways: (1) point-blank damage vs a spawned TankBrute counts `Enemy.OnEnemyDamaged` events (exactly 8 for a full blast) and asserts the HP drop equals `pelletCount × pelletDamage = 64`; (2) cone spread is measured by snapshotting all `SphereCollider` impact markers before/after a single `Fire()` at real geometry (before/after `HashSet<SphereCollider>` difference == `pelletCount`). The `HashSet` compares `UnityEngine.Object` references (overridden Equals/GetHashCode, instance-based), which avoids the obsolete-with-error `Object.GetInstanceID()` (`CS0619` in this Unity build) and needs no `GetEntityId()` API.
+
+**Reason:** `Object.GetInstanceID()` is an error-level obsolete in Unity 6000.6 (`Use GetEntityId instead`), which blocked compilation of the first test draft. The old code also built `HashSet<int>` of instance IDs only to re-resolve them into positions; the reference-set collision detection does count + positions from the same snapshot in one pass and is stable within the same frame (impact markers are destroyed 0.1 s after firing).
+
+**Alternatives considered:** `Object.GetEntityId()` for identity — rejected, keeps the same two-step resolve dance for identical behavior; awaiting the 0.1 s marker lifecycle — rejected, over-complicates a same-frame count.
+
+**Impact:** The pellet-count and cone assertions are deterministic (`Shotgun_Pellets_PointBlankFullHit_DealsPelletCountTimesPelletDamage`, `Shotgun_Pellets_ConeAtWall_ProducesPelletCountDistinctImpacts`). Reload is verified as the base-class block reload already implemented (2.0 s restore-to-50, R-key production input path); no reload reimplementation was needed for M7.
+
 ### 2026-09-15 — Wave-movement nav test samples an engaged runner, not an arbitrary enemy
 
 **Decision:** `Navigation_Wave1SpawnsEnemies_ThatMoveTowardPlayer` no longer picks the first living wave enemy and asserts it moved > 0.5 u. It now waits (up to 8 s) for a wave `ZombieRunner` whose `NavMeshAgent` is enabled, `isOnNavMesh`, and actively moving (`velocity.sqrMagnitude > 0.04`), then measures that runner over a 1.2 s window.
