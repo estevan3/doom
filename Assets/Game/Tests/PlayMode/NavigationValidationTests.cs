@@ -130,9 +130,25 @@ namespace DoomClone.Tests.PlayMode
             Assert.GreaterOrEqual(WaveManager.Instance.GetEnemiesAlive(), 1,
                 "Wave 1 must track living enemies.");
 
-            Enemy waveEnemy = Object.FindAnyObjectByType<Enemy>();
-            Assert.IsNotNull(waveEnemy, "Wave 1 should have a living enemy in the scene.");
-            Assert.IsTrue(waveEnemy.GetComponent<NavMeshAgent>().isOnNavMesh,
+            // Wave 1 mixes runners + ranged soldiers, and corridor spawn points sit at
+            // 30 u — beyond the runner's 25 u detection range — while a soldier strafes to
+            // keep range. Any single arbitrary pick can therefore legitimately travel ~0
+            // over a short window (undetected corridor runner, strafing soldier, or a
+            // runner who already closed to attack range and stands still). Asserting on
+            // such an enemy is load/order fragile. Instead, wait for a wave runner that is
+            // genuinely placed on the NavMesh AND actively moving, then measure IT — the
+            // "wave enemies move toward the player" guarantee.
+            yield return GameBootstrap.WaitUntil(
+                () => FindEngagedWaveRunner() != null, 8f);
+
+            ZombieRunner waveEnemy = FindEngagedWaveRunner();
+            Assert.IsNotNull(waveEnemy,
+                "Wave 1 must include a ZombieRunner that is placed and actively chasing " +
+                "(waited 8s; player never detected by a wave runner).");
+
+            NavMeshAgent waveAgent = waveEnemy.GetComponent<NavMeshAgent>();
+            Assert.IsNotNull(waveAgent, "Wave runner needs a NavMeshAgent.");
+            Assert.IsTrue(waveAgent.enabled && waveAgent.isOnNavMesh,
                 "Wave 1 enemies must be placed on the NavMesh.");
 
             Vector3 waveStart = waveEnemy.transform.position;
@@ -146,6 +162,21 @@ namespace DoomClone.Tests.PlayMode
             Debug.Log("[Nav] wave=" + WaveManager.Instance.GetCurrentWave() +
                       ", alive=" + WaveManager.Instance.GetEnemiesAlive() +
                       ", moved=" + waveMoved.ToString("F2"));
+        }
+
+        /// <summary>Returns a wave ZombieRunner that is placed on the NavMesh and actively
+        /// moving (i.e. chasing the player), or null. Undetected corridor runners stand
+        /// still, so agent velocity is the reliable "engaged and navigating" signal.</summary>
+        static ZombieRunner FindEngagedWaveRunner()
+        {
+            foreach (ZombieRunner runner in Object.FindObjectsByType<ZombieRunner>(FindObjectsSortMode.None))
+            {
+                NavMeshAgent agent = runner.GetComponent<NavMeshAgent>();
+                if (agent == null || !agent.enabled || !agent.isOnNavMesh) continue;
+                if (agent.velocity.sqrMagnitude <= 0.04f) continue;
+                return runner;
+            }
+            return null;
         }
 
         static IEnumerator BakeReady()

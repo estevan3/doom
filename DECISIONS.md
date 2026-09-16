@@ -171,3 +171,23 @@ This file records consequential choices that are intentionally left open by `GAM
 **Alternatives considered:** Keeping direct calls (the per-subclass guard already covers current code) — rejected because it leaves the invariant implicit and easy to break in a future enemy; disposing of the try/catch — kept, since a non-walkable destination on a valid agent is a legitimate "cannot path this frame", not an error to surface.
 
 **Impact:** Firing-at-wall weapon tests and wave-spawn windows run exception-free. No gameplay behavior changes for fully-placed agents (`SetDestination` still called with the same destinations).
+
+### 2026-09-15 — Pistol single-shot verification uses the direct production `Fire()` call
+
+**Decision:** `Pistol_Hitscan_SpawnedEnemyTakesConfiguredDamagePerShot` fires its single shot by calling `pistol.Fire()` directly (the same method the input path invokes) instead of holding the fire button for a fixed number of frames. The "one round in / enemy HP drops by exactly `pistol.damage`" assertions measure that single call. Input-path cadence remains separately covered by `Pistol_Fire_Hold_ShotCountMatchesCadence` (real-time window) and `Pistol_Ammo_RunsToZeroAndZeroBlocksFiring`.
+
+**Reason:** The first version held fire for 5 batch frames expecting one round, but PlayMode frames near spawn/NavMesh-bake can exceed the pistol's 0.3 s cadence (a test run consumed 4 rounds in 5 frames). Frame-count holds are not a reliable "one shot" proxy near cadence-scale timings; a single direct `Fire()` is deterministic and still exercises the real weapon method (raycast, ammo, event, feedback).
+
+**Alternatives considered:** Press → exactly 1 frame → release, and press → bounded real-time hold shorter than fireRate. Rejected — a single slow frame longer than 0.3 s between press and release still allows a second shot, so neither removes the frame-duration dependency.
+
+**Impact:** The hitscan-damage assertion is deterministic across load conditions. Later per-weapon milestones (shotgun/rifle) should use the same pattern: direct `Fire()` for exact per-shot state assertions, input-path holds with loose windows for cadence/auto-fire behavior.
+
+### 2026-09-15 — Wave-movement nav test samples an engaged runner, not an arbitrary enemy
+
+**Decision:** `Navigation_Wave1SpawnsEnemies_ThatMoveTowardPlayer` no longer picks the first living wave enemy and asserts it moved > 0.5 u. It now waits (up to 8 s) for a wave `ZombieRunner` whose `NavMeshAgent` is enabled, `isOnNavMesh`, and actively moving (`velocity.sqrMagnitude > 0.04`), then measures that runner over a 1.2 s window.
+
+**Reason:** The spec guarantees the Runner "rushes directly toward the player after detection" (§4.1); it does not guarantee every wave enemy moves at every instant. Wave 1 mixes runners + ranged soldiers, corridor spawn points are at 30 u (beyond the runner's 25 u detection range), and soldiers strafe to keep range — so an arbitrary pick can legitimately be undetected, already attacking (standing still), or repositioning and travel ~0 in a short window. The old version flaked exactly this way in a full-suite run (0.482 u vs the 0.5 u threshold).
+
+**Alternatives considered:** Moving the runner detection range to 30 u or moving corridor spawn points closer — rejected, that changes gameplay/level to satisfy a test; picking the farthest arena runner — rejected, the corridor runner is the most distant and stays undetected (moved=0.00).
+
+**Impact:** The test now measures a wave enemy demonstrably in its chase phase, so the "wave enemies move toward the player" requirement is verified deterministically while simple Level-1 AI (per-enemy detection ranges) remains untouched. NavigationValidationTests re-verified 3/3 in isolation and 3/3 in the full 35-test suite.

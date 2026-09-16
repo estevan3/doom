@@ -167,11 +167,26 @@ Also fixed/decided this milestone:
 
 ## Milestone 6 — Pistol
 
-- [~] Implement hitscan pistol.
-- [~] Implement damage/cadence.
-- [~] Implement ammo rules.
-- [~] Implement impact/firing feedback.
-- [ ] Add tests.
+- [x] Implement hitscan pistol.
+- [x] Implement damage/cadence.
+- [x] Implement ammo rules.
+- [x] Implement impact/firing feedback.
+- [x] Add tests (`Assets/Game/Tests/PlayMode/PistolTests.cs`, 6 tests).
+
+Acceptance (verified 2026-09-15, full PlayMode suite 35/35 + EditMode 3/3):
+
+- Pistol fires through the real input path and through the direct production `Fire()`. ✔
+- Hitscan damage against a real spawned enemy: one shot consumes exactly 1 round and reduces HP by exactly the configured damage (15). ✔ (`Pistol_Hitscan_SpawnedEnemyTakesConfiguredDamagePerShot`)
+- Cadence 0.3 s respected: immediate refire blocked, gate reopens within `fireRate ± tolerance`; 1.2 s hold burns 3–6 rounds (nominal 4). ✔
+- Ammo rules: starts full (999), runs to exactly 0, never negative, `CanFire()` false at 0, `Fire()` at 0 is a no-op. ✔
+- Default/fallback slot: boot equips Pistol at slot 0; exactly one weapon enabled. ✔
+- Firing/impact feedback exception-free at real geometry and real enemies. ✔
+- No production-code changes required for the milestone — the existing pistol implementation passed. Two flakes found in the pre-existing navigation suite were test-fixture issues, fixed (see below).
+
+Also fixed this milestone (test-infra robustness, no gameplay change):
+
+- `Navigation_Wave1SpawnsEnemies_ThatMoveTowardPlayer` sampled an arbitrary living wave enemy. Wave 1 mixes runners + ranged soldiers, corridor spawn points sit at 30 u (beyond the runner's 25 u detection range), and a soldier strafes to keep range — so an arbitrary pick can legitimately not move in a 1.2 s window, causing a load/order-dependent flake (0.482 vs 0.5 threshold in the full-suite run). It now waits for a wave `ZombieRunner` that is placed on the NavMesh **and** actively moving (`agent.velocity > 0`), then measures that runner. Recorded in `DECISIONS.md`.
+- `NavigationValidationTests` class re-verified 3/3 in isolation after the fix; full suite re-run 35/35.
 
 ## Milestone 7 — Shotgun
 
@@ -275,8 +290,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 6 — Pistol** (also in scope afterwards: M7–M9 individual weapon verification, M10+ enemy framework/waves).
-Milestones 1–5 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10).
+Next milestone to start: **Milestone 7 — Shotgun** (also in scope afterwards: M8–M9 individual weapon verification, M10+ enemy framework/waves).
+Milestones 1–6 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6).
 
-Milestones 6–14 gameplay code already exists and compiles but is **unverified by tests**; each still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
+Milestones 7–14 gameplay code already exists and compiles but is **unverified by tests**; each still needs its PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
 After completing each milestone, update this file and commit the result.
