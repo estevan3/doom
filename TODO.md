@@ -281,10 +281,18 @@ Acceptance (verified 2026-09-16, full PlayMode suite 62/62 + EditMode 7/7, Enemy
 
 ## Milestone 11 — Runner (`ZombieRunner`)
 
-- [~] Implement rapid direct chase.
-- [~] Implement fast melee attack.
-- [~] Add distinct visual (capsule + material color).
-- [ ] Add tests.
+- [x] Implement rapid direct chase.
+- [x] Implement fast melee attack.
+- [x] Add distinct visual (capsule + material color).
+- [x] Add tests (`Assets/Game/Tests/PlayMode/RunnerEnemyTests.cs`, 4 tests).
+
+Acceptance (verified 2026-09-16, full PlayMode suite 66/66 + EditMode 7/7, RunnerEnemyTests 4/4):
+
+- Config distinctness: lowest HP (30 < soldier 60 < brute 200), highest speed (5 > 3.5 > 1.5), fastest cadence (0.8 < 1.5 < 2.5), melee-tier damage (8), melee combat range (1.8 m) versus the soldier's 25 m ranged attack — behavioral difference, not just statistics. ✔
+- Rapid direct chase: a runner spawned 12 m behind the player detects (25 m range), rushes straight, and closes to melee range; runtime smoke measured 12.0 m → 1.8 m in ~2.5 s. ✔
+- Fast melee attack: repeated connections at the 0.8 s cadence deal exactly the configured 8 damage per hit (smoke: player HP 100 → 44 over several ticks), single hit never exceeds cadence. ✔
+- Distinct visual: green capsule material (`Color.green` set in `Start`), explicitly contrasted against soldier orange and brute dark red. ✔
+- No production-code changes required — the existing `ZombieRunner` passed M11 as-is; only the dedicated test file was added. Runtime smoke: `TestResults/runner_milestone_screenshot.png` captured exception-free (only known graphicsApiMask + Blender console noise).
 
 ## Milestone 12 — Ranged Soldier
 
@@ -347,8 +355,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 11 — Runner (`ZombieRunner`)** dedicated behavior tests, then M12 (Ranged Soldier), M13 (Brute `TankBrute`), and M14 (WaveManager timing tests).
-Milestones 1–10 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4).
+Next milestone to start: **Milestone 12 — Ranged Soldier (`RangedSoldier`)** dedicated behavior tests, then M13 (Brute `TankBrute`) and M14 (WaveManager timing tests).
+Milestones 1–11 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4). M11: Runner — rapid direct chase, fast melee cadence + configured damage, distinct green visual (EditMode 7/7, PlayMode 66/66, RunnerEnemyTests 4/4).
 
-Milestones 11–14 gameplay code already exists and compiles; M10 (base framework) has been verified by tests, M11–M14 (per-type behavior + WaveManager timing) still need their dedicated PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
+Milestones 12–14 gameplay code already exists and compiles; M10 (base framework) and M11 (Runner) have been verified by tests, M12–M14 (Ranged Soldier, Brute, WaveManager timing) still need their dedicated PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
 After completing each milestone, update this file and commit the result.
