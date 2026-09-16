@@ -378,6 +378,9 @@ public class WaveManager : MonoBehaviour
 
         if (hud != null)
         {
+            // The cooldown coroutine may be mid-countdown when the player dies; its frozen
+            // "Next wave in: N..." panel must never linger behind the Game Over screen.
+            hud.HideCountdown();
             hud.ShowGameOver(currentWave);
         }
 

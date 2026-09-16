@@ -234,6 +234,12 @@ namespace DoomClone.Tests.PlayMode
             Assert.IsNotNull(bruteCol, "Brute must carry its CapsuleCollider.");
             Assert.IsNotNull(runnerCol, "Runner must carry its CapsuleCollider.");
             Assert.IsNotNull(soldierCol, "Soldier must carry its CapsuleCollider.");
+            // These enemies have no Rigidbody: their colliders are static, so `bounds`
+            // reflects the transform only after a physics sync. Sync now, otherwise the
+            // brute's scale-2 AABB can still report scale-1 (height 2.0 == runner's) and
+            // the hitbox assertions fail depending on how many fixed steps the scheduler
+            // ran between SpawnEnemy and this line.
+            Physics.SyncTransforms();
             float bruteHeight = bruteCol.bounds.size.y;
             float bruteWidth = bruteCol.bounds.size.x;
             Assert.Greater(bruteHeight, runnerCol.bounds.size.y + 0.5f,

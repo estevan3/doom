@@ -327,3 +327,43 @@ Ray ray = new Ray(origin, direction);
 **Alternatives considered:** Reflection over the private `isTelegraphing` (rejected — brittle); tightening the brute so it enforces `attackRate` as a cadence gate before re-telegraphing (rejected — TELEGRAPH IS the gate, and GAME_SPEC only requires a slow attack cadence + a telegraph the player can dodge; behavior already conforms).
 
 **Impact:** Tests arm/kill off genuine brute telegraph state; no gameplay change. `BruteEnemyTests` 5/5, full PlayMode suite 76/76, EditMode 7/7.
+
+### 2026-09-16 — M14 WaveManager timing test: event-to-event windows + exact countdown sequence
+
+**Decision:** `WaveManagerTests` measure the two mandated timings with event-to-event walls in scaled time instead of per-tick clocks: (1) initial wave delay — from the level-ready frame (`GameTestAPI.StartFreshLevel(30f)` returns after `gameActive`, so the anchor is at most one WaveManager frame after the real `t0`) until `Wm.GetCurrentWave() >= 1`, asserted within `[0.9, 4.0]` s; (2) cooldown — from the final kill's death frame (countdown starts same frame) until the first frame `Wm.GetCurrentWave() >= 2`, asserted within `[4.5, 8.0]` s. The countdown HUD itself is verified by asserting the exact sequence `[5, 4, 3, 2, 1]` of parsed `"Next wave in: N..."` values with no per-tick wall-clock requirements; by asserting the countdown GameObject stays active the whole cooldown; and by asserting a final `"GAME OVER"` + `"Survived 1 waves"` screen with the countdown hidden behind it.
+
+**Reason:** The production loop uses `WaitForSeconds(5)` run five times inside the cooldown coroutine, so the cooldown is structurally ≥ 5.0 s measured between in-game events regardless of frame rate; a t0-anchored window on the initial delay only needs to tolerate a ≤ 1-frame readback lag (the test samples the level-ready frame slightly late). An attempt to also assert "each tick lands ~1 s after the previous" failed deterministically (sampled gap 0.67 s in the first full run): the test reads the text on the first frame the change is OBSERVED, and WaveManager can have advanced one more cooldown step than the test's readback frame, shrinking sampled gaps below 1.0 while the production countdown is correct. Per `TEST_PLAN.md` "timing tolerances", a window that merely spans 4–6 s is too weak — hence the exact `[5→1]` sequence plus the whole-cooldown event window.
+
+**Alternatives considered:** Asserting per-tick spacing (rejected — measured-unreliable in batch; see reason); asserting wall-clock equality for the 2 s delay (rejected — impossible at 1–8 FPS); replacing the cooldown with `yield return new WaitForSeconds(5)` single wait so a single event-to-event window is clean (rejected — touches production to satisfy a test; the five-1s-loops structure IS the production behavior worth pinning).
+
+**Impact:** All five M14 tests pass deterministically (5/5 class, 81/81 full suite). The windows document frame-quantization reality; the "no enemy exists during the whole cooldown" and "countdown visible the whole time" assertions make the window robust rather than a range-only coincidence.
+
+### 2026-09-16 — Wave composition totals {6, 6, 8} asserted exactly by the M14 scaling test
+
+**Decision:** `WaveManager_Difficulty_ProgressiveScaling_AcrossEarlyWaves` asserts the exact per-wave spawn totals `{6, 6, 8}` for waves 1–3 (composition 0.7 zombie / 0.3 soldier, total = `RoundToInt(5 × 1.3^(wave−1))`, so 5 → 6.5 → 8.45 = 6, 6.5, 8 — a documented floor-under-0.5 tie at wave 2), plus structural monotonicity (wave-3 total > wave-1) and monotonic soldier proportion growth. The `ExpectedWaveTotals` array notes that M15 rebalancing must update it in the same commit.
+
+**Reason:** GAME_SPEC §6 requires difficulty that "increases progressively" and "later waves must contain more enemies and/or a higher proportion of stronger enemies". Exact totals are deterministic from the production formula (no RNG), so asserting them exactly is stronger than a monotonic-only check and catches accidental formula changes; the wave-2 equal-count is explicitly expected because the same count with a higher soldier ratio still fits "and/or".
+
+**Alternatives considered:** Only monotonic assertions (weaker — miss a formula regression that keeps counts monotonic); driving the assertion from `RoundToInt` recomputation in the test (rejected — mirrors production, would not catch a drift).
+
+**Impact:** The test pins the exact composition contract and makes any M15 rebalance a conscious, documented change.
+
+### 2026-09-16 — `WaveManager.OnPlayerDeath` hides the inter-wave countdown before Game Over
+
+**Decision:** Added `hud.HideCountdown()` as the first line of the `hud != null` branch in `WaveManager.OnPlayerDeath`, before `hud.ShowGameOver(currentWave)`.
+
+**Reason:** The countdown HUD element (`CountdownBG`) is only hidden by `HideCountdown()`, which the normal cooldown path calls when the next wave spawns. On player death during the cooldown, nothing hid it, so `GAME OVER` could render with the countdown still visible behind/over it, violating GAME_SPEC §7's clean Game Over presentation. Found and fixed as a polish in the M14 player-death test.
+
+**Alternatives considered:** Hiding the panel inside `PlayerHUD.ShowGameOver` unconditionally (rejected — `HideCountdown` already exists and is the single presentation-entry the HUD owns; the death path is where the missing call belongs).
+
+**Impact:** No gameplay change. Game Over now always covers/clears the cooldown text; verified by the player-death test asserting countdown hidden.
+
+### 2026-09-16 — M13 brute hitbox test: `Physics.SyncTransforms()` before reading `collider.bounds`
+
+**Decision:** `BruteEnemyTests.Brute_Config_..._LargerHitbox_Distinct` calls `Physics.SyncTransforms()` immediately before reading `bruteCol.bounds.size.y/x` and the other colliders' bounds.
+
+**Reason:** Spawned enemies carry a `NavMeshAgent` but no `Rigidbody`, so their colliders are static: the physics-world AABB behind `Collider.bounds` only reflects the transform once a physics sync runs. The brute's `Start` sets `localScale = 2` on the transform (asserted correctly), but the CACHED collider bounds can still report scale-1 (height 2.0 == the runner's 2.0) when the read lands before any fixed step — exactly what failed once in the first full 81-test run (79/81) with brute=2.0 vs runner=2.0. This is the same static-collider root cause already fixed for `SpawnFrozenTarget` (2026-09-15).
+
+**Alternatives considered:** Measuring after `yield return null` extra frames (rejected — frame-rate dependent, exactly the flake mechanism); comparing `transform.localScale` only (rejected — the spec requires a LARGER hitbox, not just a scaled model).
+
+**Impact:** The hitbox comparison is deterministic regardless of how many fixed steps the scheduler ran between spawn and measurement. No production change; brute collider remains scale-2 (world height 4.0). BruteEnemyTests 5/5 in isolation and in the full 81/81 suite.

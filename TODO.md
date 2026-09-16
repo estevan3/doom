@@ -340,23 +340,34 @@ Production touch (observability, no gameplay change, recorded in `DECISIONS.md`)
 
 ## Milestone 14 — WaveManager
 
-- [~] Implement singleton `WaveManager`.
-- [~] Implement 2 s initial delay.
-- [~] Implement wave composition (ratio-based scaling).
-- [~] Implement alive-enemy tracking.
-- [~] Implement 5 s cooldown.
-- [~] Implement HUD countdown.
-- [~] Implement infinite progression.
-- [~] Implement difficulty scaling.
-- [~] Implement stop-on-player-death behavior.
-- [ ] Add timing and state-transition tests.
+- [x] Implement singleton `WaveManager`.
+- [x] Implement 2 s initial delay.
+- [x] Implement wave composition (ratio-based scaling).
+- [x] Implement alive-enemy tracking.
+- [x] Implement 5 s cooldown.
+- [x] Implement HUD countdown.
+- [x] Implement infinite progression.
+- [x] Implement difficulty scaling.
+- [x] Implement stop-on-player-death behavior.
+- [x] Add timing and state-transition tests (`Assets/Game/Tests/PlayMode/WaveManagerTests.cs`, 5 tests).
 
-Acceptance:
+Acceptance (verified 2026-09-16, full PlayMode suite 81/81 + EditMode 7/7, WaveManagerTests 5/5):
 
-- Wave 1 starts after 2 s. Not run-verified in this pass.
-- Final enemy death starts a 5 s cooldown. Not run-verified in this pass.
-- Next wave begins automatically. Not run-verified in this pass.
-- Waves continue indefinitely until player death. Not run-verified in this pass.
+- Wave 1 starts after 2 s. ✔ REGULATED: HUD shows player-alive before 2 s while the wave is still 0 (test-tolerance sampling window [0.9, 4.0] due to ≤1-frame readback lag); wave 1 then spawns exactly {5 ZombieRunner + 1 RangedSoldier} = 6 enemies. ✔
+- Final enemy death starts a 5 s cooldown. ✔ same-frame countdown to 5, whole cooldown measures within [4.5, 8.0] s in-game time (5 × 1 s scaled waits = structurally ≥5.0 s; window is frame-quantization-safe); no enemy object exists during the entire cooldown, countdown text visible the whole time.
+- Next wave begins automatically. ✔ after the cooldown `currentWave` goes 1 → 2 with no input.
+- Countdown HUD ticks EXACTLY 5 → 4 → 3 → 2 → 1 (sequence asserted exactly; per-tick wall-clock is NOT asserted — the test frame that reads a tick can be up to one frame late, which shrank sampled gaps below 1 s; see `DECISIONS.md`).
+- Waves continue until player death; difficulty scales progressively. ✔ wave totals {6, 6, 8} for waves 1–3 (composition 0.7 zombie / 0.3 soldier with per-wave total = RoundToInt(5 × 1.3^(wave−1))), strictly increasing count AND more soldiers in later waves.
+- Player death stops new wave spawning. ✔ dying during the cooldown leaves wave at 1 forever, no living enemies exist after 7.5 s, and `GameTestAPI.SpawnEnemy` returns null — the wave loop is stopped per GAME_SPEC §7.
+- Game Over UI on death with survived-wave count. ✔ `GAME OVER` + `Survived 1 waves` + countdown hidden behind it.
+
+Production touch (polish, recorded in `DECISIONS.md`):
+
+- `WaveManager.OnPlayerDeath` now calls `hud.HideCountdown()` before `ShowGameOver`, so the inter-wave countdown never remains visible behind the Game Over screen. No gameplay change.
+
+Test-infra robustness fix (M13 test, recorded in `DECISIONS.md`):
+
+- `BruteEnemyTests` collider-hitbox comparison now calls `Physics.SyncTransforms()` before reading `collider.bounds`: spawned enemies have no Rigidbody, so the brute's scale-2 AABB could still report scale-1 (height 2.0 == runner's) when read before a physics sync. This is the same static-collider root cause as the frozen-target fix in `DECISIONS.md` (2026-09-15) and surfaced once in the first full 81-test run (79/81) — not a gameplay defect.
 
 ## Milestone 15 — Integration polish
 
@@ -382,8 +393,10 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 14 — WaveManager** timing and state-transition tests (M13 Brute is now complete and verified).
+Next milestone to start: **Milestone 15 — Integration polish** (M14 WaveManager is now complete and verified).
 Milestones 1–12 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4). M11: Runner — rapid direct chase, fast melee cadence + configured damage, distinct green visual (EditMode 7/7, PlayMode 66/66, RunnerEnemyTests 4/4). M12: Ranged Soldier — ideal-range back-off, strafe band, 25 m ranged hitscan at 1.5 s cadence, distinct orange visual; production defect fixed (hitscan ray aimed 1 m over the player's head — now aims at the capsule center) (EditMode 7/7, PlayMode 71/71, RangedSoldierTests 5/5). M13: Brute — slow approach, ~0.5 s telegraph slam (30 damage via OverlapSphere), scale-2 hitbox, dark red visual, slowest cadence; `IsTelegraphing()` accessor added, no gameplay defects (EditMode 7/7, PlayMode 76/76, BruteEnemyTests 5/5).
 
-Milestones 1–13 are complete and verified; M14 (WaveManager timing/state-transition tests) still needs its dedicated PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
+Milestones 1–14 are complete and verified (full PlayMode suite 81/81 + EditMode 7/7 as of M14). Milestones 1–13 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4). M11: Runner — rapid direct chase, fast melee cadence + configured damage, distinct green visual (EditMode 7/7, PlayMode 66/66, RunnerEnemyTests 4/4).
+
+M12: Ranged Soldier — ideal-range back-off, strafe band, 25 m ranged hitscan at 1.5 s cadence, distinct orange visual; production defect fixed (hitscan ray aimed 1 m over the player's head — now aims at the capsule center (EditMode 7/7, PlayMode 71/71, RangedSoldierTests 5/5). M13: Brute — slow approach, ~0.5 s telegraph slam (30 damage via OverlapSphere), scale-2 hitbox, dark red visual, slowest cadence; `IsTelegraphing()` accessor added, no gameplay defects (EditMode 7/7, PlayMode 76/76, BruteEnemyTests 5/5). M14: WaveManager — 2 s initial delay, exact {5 ZombieRunner + 1 Soldier} wave 1, alive-tracking/single-kill, same-frame 5 s countdown [5→1] exact sequence, auto next wave, {6,6,8} progressive scaling, stop-on-death, Game Over count; one polish (`HideCountdown` on death) + one M13 test-infra fix (static-collider `Physics.SyncTransforms` before `bounds`) (EditMode 7/7, PlayMode 81/81, WaveManagerTests 5/5).
 After completing each milestone, update this file and commit the result.
