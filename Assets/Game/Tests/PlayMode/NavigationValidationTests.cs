@@ -151,17 +151,45 @@ namespace DoomClone.Tests.PlayMode
             Assert.IsTrue(waveAgent.enabled && waveAgent.isOnNavMesh,
                 "Wave 1 enemies must be placed on the NavMesh.");
 
-            Vector3 waveStart = waveEnemy.transform.position;
-            yield return new WaitForSeconds(1.2f);
+            // Measure the chase DIRECTLY from the gate instead of a fixed 1.2s window:
+            // a runner sampled the frame before it reaches the player legitimately moves
+            // ~0 in the following second (it stands still in melee range attacking), and
+            // at 1-5 FPS a WaitForSeconds(1.2) may not even span a moving runner. Anchor
+            // each engaged runner as we find it, keep accumulating ITS real NavMesh
+            // displacement every frame, and re-acquire the next still-chasing runner if
+            // the current one stops reaching (it arrived or got blocked). bestMoved is the
+            // max single-runner chase displacement, so the proof survives re-anchors.
+            ZombieRunner measured = null;
+            Vector3 waveStart = Vector3.zero;
+            float bestMoved = 0f;
+            float navDeadline = Time.time + 20f;
+            while (bestMoved <= 0.5f && Time.time < navDeadline)
+            {
+                ZombieRunner engaged = FindEngagedWaveRunner();
+                if (engaged == null)
+                {
+                    yield return null;
+                    continue;
+                }
 
-            float waveMoved = Vector3.Distance(waveEnemy.transform.position, waveStart);
-            Assert.Greater(waveMoved, 0.5f,
-                "Wave-enemy NavMeshAgent must drive movement toward the player (moved=" +
-                waveMoved.ToString("F2") + "u).");
+                if (engaged != measured)
+                {
+                    measured = engaged;
+                    waveStart = engaged.transform.position;
+                }
+
+                float moved = Vector3.Distance(engaged.transform.position, waveStart);
+                if (moved > bestMoved) bestMoved = moved;
+                yield return null;
+            }
+
+            Assert.Greater(bestMoved, 0.5f,
+                "Wave-enemy NavMeshAgent must drive movement toward the player (bestMoved=" +
+                bestMoved.ToString("F2") + "u).");
 
             Debug.Log("[Nav] wave=" + WaveManager.Instance.GetCurrentWave() +
                       ", alive=" + WaveManager.Instance.GetEnemiesAlive() +
-                      ", moved=" + waveMoved.ToString("F2"));
+                      ", moved=" + bestMoved.ToString("F2"));
         }
 
         /// <summary>Returns a wave ZombieRunner that is placed on the NavMesh and actively

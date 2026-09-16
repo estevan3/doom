@@ -237,11 +237,27 @@ Also fixed/decided this milestone (test-infra robustness, no gameplay change):
 
 ## Milestone 9 — Chainsaw
 
-- [~] Implement short-range melee.
-- [~] Implement continuous damage while held.
-- [~] Implement no-ammo behavior.
-- [~] Implement simple continuous feedback.
-- [ ] Add tests.
+- [x] Implement short-range melee.
+- [x] Implement continuous damage while held.
+- [x] Implement no-ammo behavior.
+- [x] Implement simple continuous feedback.
+- [x] Add tests (`Assets/Game/Tests/PlayMode/ChainsawTests.cs`, 5 tests).
+
+Acceptance (verified 2026-09-16, full PlayMode suite 56/56 + EditMode 3/3, ChainsawTests 5/5):
+
+- Config matches spec: 3 m short-range melee (well below the pistol's hitscan range), 30 damage per 0.1 s tick = 300 DPS sustained (exceeds the rifle's 100 DPS), `usesAmmo=false`/`maxAmmo=0` sentinel so ammo reads 0 forever and `OnAmmoChanged` is never raised. ✔
+- In-range single tick vs a spawned TankBrute (200 HP) at 2 m: exactly 1 `OnEnemyDamaged` event, HP drops by exactly 30, brute survives, ammo stays 0. ✔
+- Cadence lock is a same-frame property: `CanFire()` is false immediately after `Fire()` (now asserted before any yield — a single slow batch frame >0.1 s between call and assert used to defeat it). ✔
+- Out-of-range: runner at 5 m (near edge ~4.5 m, never within the 3 m ray, sanity ray proves alignment) takes 0 damage, HP untouched, ammo 0. ✔
+- Held attack vs brute: repeated `OnEnemyDamaged` hits (≥2), each tick exactly 30, ammo stays 0 and no `OnAmmoChanged` while attacking. ✔
+- Feedback: held attack runs ≥2 attacking frames exception-free and the camera is displaced off its rest pose by CameraShake during the hold (max displacement > 0.005 m). ✔
+- No gameplay defects found in the existing Chainsaw; two production touches made for truthfulness/observability (see DECISIONS.md): `damagePerSecond` corrected 30 → 300, public `IsAttacking()` accessor added.
+
+Also fixed this milestone (test-fixture robustness, no gameplay change):
+
+- `Chainsaw_Range_EnemyWithinRange_TakesConfiguredDamagePerTick` asserted cadence lock AFTER a `yield return null` — at ~1 FPS (this run's sustained batch load) one frame exceeds the 0.1 s fireRate, so the lock legitimately reopened before the assert. The assert now runs before any frame can advance. Recorded in `DECISIONS.md`.
+- `Chainsaw_Feedback_HeldAttack_RunsContinuouslyWithoutExceptions` sampled camera displacement ONLY on attacking frames — but `CameraShake.Update` materializes the vibration one frame AFTER the attacking tick in PlayMode script order, so attack-frame sampling measured 0 despite real displacement (instrumentation showed 0.0195 over the same hold). Displacement is now sampled every frame; the corrective holds until ≥2 attacking frames are OBSERVED (deadline-based), which also removes the old fixed-1.25s-window dependence on frame rate. Recorded in `DECISIONS.md`.
+- `Navigation_Wave1SpawnsEnemies_ThatMoveTowardPlayer` measured a fixed 1.2 s window after a velocity gate — a runner sampled the frame before it reaches the player stands in melee range and moves ~0 in that window (0.0128 u in this run). It now measures directly from the gate, re-acquiring a still-chasing runner when the current one stops and asserting best single-runner displacement, frame-rate independent. Recorded in `DECISIONS.md`.
 
 ## Milestone 10 — Enemy framework
 
@@ -320,8 +336,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 9 — Chainsaw** (also in scope afterwards: M10+ enemy framework/waves).
-Milestones 1–8 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7).
+Next milestone to start: **Milestone 10 — Enemy framework** (Runner/Soldier/Brute behavior + base `Enemy` tests, then M14 WaveManager timing tests).
+Milestones 1–9 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5).
 
-Milestones 8–14 gameplay code already exists and compiles; weapons 8 has been verified by tests, but M9–M14 still need their PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
+Milestones 8–14 gameplay code already exists and compiles; weapons M8–M9 have been verified by tests, M10–M14 (enemy framework/behavior + WaveManager timing) still need their PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
 After completing each milestone, update this file and commit the result.

@@ -221,3 +221,53 @@ This file records consequential choices that are intentionally left open by `GAM
 **Alternatives considered:** Teleporting after the coroutine completes (0.3 s wait) — still racy because the coroutine can re-enable the agent and fight the teleport; keeping `agent.enabled = false` — the coroutine re-enables it itself. `DestroyImmediate` + null-guard exit is the only deterministic neutralization and produces no console warning.
 
 **Impact:** Enemy hitscan/hold tests now hit their target deterministically in every run (sanity always raycasts the brute, not the wall). The change is confined to the shared test helper; production gameplay is untouched.
+
+### 2026-09-16 — Chainsaw `damagePerSecond` corrected to 300 (truthful config)
+
+**Decision:** `Chainsaw.damagePerSecond` changed from `30f` to `300f`.
+
+**Reason:** The field claims "damage per second", but the chainsaw deals `damage / fireRate = 30 / 0.1 = 300` per second while held. `30f` was a stale declaration contradicting the fields that actually implement the behavior (it described per-tick damage, not per-second). The M9 config test asserts `damagePerSecond == damage / fireRate` so the declared value can never silently drift from the realized DPS again.
+
+**Alternatives considered:** Removing the public field (gameplay code doesn't read it) — rejected, keeping a truthful knob documents the identity and gives tests a single source to assert against.
+
+**Impact:** No gameplay change (`dps` is only used by the new test). Config truthfulness per `TEST_PLAN.md` §"weapon damage calculations".
+
+### 2026-09-16 — Chainsaw `IsAttacking()` public read-only accessor
+
+**Decision:** Added `public bool IsAttacking() => isAttacking;` to `Chainsaw`.
+
+**Reason:** The M9 feedback test needs to observe that the held attack actually engages (proof the camera-shake branch is reached), and `isAttacking` was private with no getter. A tiny read-only accessor matches the codebase's observability style (`GetHealth`, `GetAmmo`, `IsDead`, `IsReloading`).
+
+**Alternatives considered:** Inspecting the private field via reflection or removing the gate — rejected (reflection is brittle; the gate is real production logic worth asserting).
+
+**Impact:** Observability API only; no gameplay behavior change.
+
+### 2026-09-16 — Camera-shake displacement measured every frame, not just attacking frames
+
+**Decision:** `Chainsaw_Feedback_HeldAttack_RunsContinuouslyWithoutExceptions` samples the camera local position on EVERY frame of the hold (not only frames where `IsAttacking()` is true), and holds until ≥2 attacking frames are observed (8 s realtime deadline) instead of a fixed 1.25 s hold.
+
+**Reason:** PlayMode instrumentation showed the vibration is genuinely applied (`CameraShake.Update` displaced the camera up to 0.0195 m) while attack-frame sampling reported exactly 0.0000: in script order `Chainsaw.Update` runs before the test coroutine and `CameraShake.Update` runs after the coroutine in the same frame, so the shake materializes one frame AFTER the attacking tick. Gating the sample on `IsAttacking()` guarantees readings are taken before the vibration appears. Additionally, a fixed 1.25 s realtime hold can elapse in a single slow batch frame (this 56-test run ran at ~1 FPS) whose chainsaw Update runs before the queued fire-press registers — zero attacking frames for the whole press. Observing ≥2 attacking frames forces the press to register and the 0.1 s cadence to reopen twice, making the hold frame-rate independent.
+
+**Alternatives considered:** Adding a custom script execution order so the shake applies in the same frame as the attack — rejected, forces an editor-wide ordering for a test concern; sampling attack frames with a large per-frame tolerance — rejected, would relax the assertion instead of fixing the sampling.
+
+**Impact:** The feedback test proves both the attacking "on" state AND the continuous camera vibration exception-free, independent of batch frame rate.
+
+### 2026-09-16 — Same-frame cadence-lock assertion (before any yield)
+
+**Decision:** `Chainsaw_Range_EnemyWithinRange_TakesConfiguredDamagePerTick` asserts `CanFire() == false` immediately after the direct `Fire()` call, before the enclosing `yield return null`.
+
+**Reason:** At ~1 FPS a single batch frame lasts > 0.1 s (the chainsaw `fireRate`), so yielding between `Fire()` and the assert legitimately reopens the cadence gate before the test reads it — a false failure about which frame boundary was crossed, not about weapon behavior.
+
+**Alternatives considered:** Re-measuring via a fixed-time hold — rejected; the direct-Call assert is deterministic and the input-path cadence is already covered by the held test.
+
+**Impact:** Cadence lock is verified as a same-frame property, identical to the M9 test-infra note for the old M4-era flake.
+
+### 2026-09-16 — Wave-movement nav test: measure from the gate with re-acquire + bestMoved
+
+**Decision:** `Navigation_Wave1SpawnsEnemies_ThatMoveTowardPlayer` no longer measures a fixed 1.2 s `WaitForSeconds` window after finding a moving runner. It anchors each engaged runner (NavMesh-placed + `velocity > 0.2 u/s`) as found, accumulates ITS true displacement every frame, and if that runner stops being engaged (reached the player / in melee range attacking / blocked) it re-acquires the next still-chasing runner. It asserts the single best runner displacement exceeds 0.5 u within a 20 s game-time deadline.
+
+**Reason:** A runner sampled the frame just before it reaches the player legitimately moves ~0 in the following second — it stands still attacking in melee range (measured 0.0128 u in the M9 full-suite run, a genuine non-flake with the old fixture). At 1–5 FPS a fixed 1.2 s window may not even span a moving runner. Measuring from the moment the runner is engaged catches the chase regardless of when the window starts, and re-acquiring survivors keeps the proof when the first runner arrives.
+
+**Alternatives considered:** Fixed larger window (still frame-count bound); basing the wave-move guarantee on pre-arrival spawn-time measurement only (weaker, couples acceptance to wave-1 composition internals).
+
+**Impact:** The "wave enemies navigate toward the player" acceptance is frame-rate independent and not confounded by arrival standstill.

@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class Chainsaw : Weapon
 {
-    public float damagePerSecond = 30f;
+    public float damagePerSecond = 300f;
     public float attackRange = 3f;
     private bool isAttacking = false;
     private CameraShake cameraShake;
@@ -23,6 +23,8 @@ public class Chainsaw : Weapon
         weaponManager = manager;
         cameraShake = cam.GetComponent<CameraShake>();
     }
+
+    public bool IsAttacking() => isAttacking;
 
     public override void Update()
     {
