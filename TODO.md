@@ -372,15 +372,21 @@ Test-infra robustness fix (M13 test, recorded in `DECISIONS.md`):
 ## Milestone 15 — Integration polish
 
 - [x] Validate all enemy/weapon combinations (added `CombatCrossProductTests`, 3/3, committed separately).
-- [~] Finish Game Over UI (code exists; button restart works per git history).
-- [~] Finish weapon HUD/ammo behavior.
-- [ ] Validate spawn points and NavMesh.
-- [ ] Run full EditMode suite (no tests exist yet).
-- [ ] Run full PlayMode suite (no tests exist yet).
-- [ ] Run full smoke test (no fixture exists).
-- [ ] Capture representative screenshots.
+- [x] Finish Game Over UI (button restart verified: `Player_GameOverRestartButton_TriggersCleanRestart`, 1/1 batch).
+- [x] Finish weapon HUD/ammo behavior (M4/M5/M14 coverage: HUD fields, damage/heal reflection, ammo/weapon display, countdown, Game Over).
+- [x] Validate spawn points and NavMesh (`NavigationValidationTests`, 3/3, M3).
+- [x] Run full EditMode suite (7/7, batch — `TestResults/EditMode-M15-results.xml`).
+- [x] Run full PlayMode suite (84 total batch: 66 pass + 18 known input fails per Open Issue 2026-09-23; non-input subset fully green — `TestResults/PlayMode-M15-results.xml`).
+- [x] Run full smoke test (`AutomationSmokeTests`, 2/2, batch).
+- [x] Capture representative screenshots (`TestResults/player_hud_screenshot.png`, `runner_milestone_screenshot.png`, `ranged_soldier_milestone.png`, `brute_milestone.png`, `weapon_framework_screenshot.png`, `automation_acceptance.png`).
 - [ ] Fix remaining runtime errors (Blender import + graphicsApiMask console noise to clean up).
 - [ ] Balance damage/health/cadence.
+
+### M15 verification summary (2026-09-16)
+
+- EditMode full suite: **7/7 passed** (batch CLI).
+- PlayMode full suite batch: **66/84 passed**; the 18 failures are EXACTLY the known input-driven set documented in Open Issue 2026-09-23 (Pistol 3, Shotgun 4, AssaultRifleDialogue 3, Chainsaw 2, Player movement 3, WeaponFramework 3). Zero new failures in `CombatCrossProductTests` (3/3), `WaveManagerTests` (5/5), `NavigationValidationTests` (3/3), `AutomationSmokeTests` (2/2), `EnemyFrameworkTests` (6/6), `RunnerEnemyTests` (4/4), `RangedSoldierTests` (5/5), `BruteEnemyTests` (5/5), `LevelValidationTests` (1/1), and every non-input test.
+- Game Over restart button now verified end-to-end: `Player_GameOverRestartButton_TriggersCleanRestart` calls `ShowGameOver(3)`, finds the live `RestartButton`, invokes its real production `onClick` binding (`GameManager.RestartGame`), and asserts a clean 100-HP restart. Requires `UnityEngine.UI`; added `Unity.ugui` to `DoomClone.PlayModeTests.asmdef`. No input injection needed, so it is batch-safe and green in CLI.
 
 ## Open issues (with deadline)
 

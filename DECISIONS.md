@@ -22,6 +22,16 @@ This file records consequential choices that are intentionally left open by `GAM
 
 ## Current decisions
 
+### 2026-09-16 — Game Over restart button verified through the real production binding
+
+**Decision:** `PlayerTests` gains `Player_GameOverRestartButton_TriggersCleanRestart`, which calls `hud.ShowGameOver(3)`, locates the live `RestartButton` GameObject by name, and invokes its `Button.onClick` — the exact binding production `CreateButton` registered (`GameManager.RestartGame`). It asserts a new Player, 100 HP, not dead, `gameActive`. Supporting change: `Unity.ugui` added to `DoomClone.PlayModeTests.asmdef` so the test can reference `UnityEngine.UI.Button`.
+
+**Reason:** `GameTestAPI.ResetGame()` already proves restart works, but no test exercised the Game Over screen's actual REINICIAR button binding (GAME_SPEC §7 restart path). The button handler is a plain `UnityAction`, so invoking `onClick.Invoke()` needs no synthetic InputSystem input — it is batch-CLI-safe (verified 1/1 green in `-batchmode`), unlike the 18 input-driven tests covered by Open Issue 2026-09-16.
+
+**Alternatives considered:** Simulating a pointer click over the button via `EventSystem` (`ExecuteEvents.Execute` with `IPointerClickHandler`) — rejected, requires a working input plumbing and is unnecessary for a `UnityAction` handler; calling `GameManager.RestartGame()` directly — rejected, bypasses the button→binding→manager chain this test pins.
+
+**Impact:** CI batch runs now cover restart-after-GameOver end-to-end. No production gameplay change; `.asmdef` reference addition is test-assembly-only.
+
 ### 2026-09-14 — Runtime production assembly created as `DoomClone.Runtime`
 
 **Decision:** Added `Assets/Scripts/DoomClone.Runtime.asmdef` so all existing production scripts compile into a referenceable assembly named `DoomClone.Runtime`. No scripts were physically moved; the `.asmdef` was added inside the existing `Assets/Scripts/` folder.

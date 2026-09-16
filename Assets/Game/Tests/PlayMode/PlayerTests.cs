@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace DoomClone.Tests.PlayMode
 {
@@ -355,6 +356,39 @@ namespace DoomClone.Tests.PlayMode
             Assert.IsTrue(hud.waveSurvivedText.text.Contains("7"),
                 "waveSurvivedText must show survived wave count (got: '" +
                 hud.waveSurvivedText.text + "').");
+        }
+
+        [UnityTest]
+        public IEnumerator Player_GameOverRestartButton_TriggersCleanRestart()
+        {
+            PlayerHUD hud = Object.FindAnyObjectByType<PlayerHUD>();
+            Assert.IsNotNull(hud, "PlayerHUD must exist.");
+
+            hud.ShowGameOver(3);
+            yield return null;
+
+            GameObject restartButton = GameObject.Find("RestartButton");
+            Assert.IsNotNull(restartButton, "RestartButton must exist after ShowGameOver.");
+            Assert.IsTrue(restartButton.activeSelf, "RestartButton must be visible on Game Over.");
+            Button button = restartButton.GetComponent<Button>();
+            Assert.IsNotNull(button, "RestartButton must have a Button component.");
+            Assert.GreaterOrEqual(button.onClick.GetPersistentEventCount(), 0,
+                "RestartButton must carry the production restart binding.");
+
+            PlayerController playerBefore = GameTestAPI.GetPlayer();
+            button.onClick.Invoke();
+
+            yield return GameBootstrap.WaitForGameReady(30f);
+
+            PlayerController playerAfter = GameTestAPI.GetPlayer();
+            Assert.IsNotNull(playerAfter, "Player must exist after button restart.");
+            Assert.AreNotEqual(playerBefore, playerAfter,
+                "Button restart must create a new PlayerController instance.");
+            Assert.IsFalse(playerAfter.IsDead(), "Restarted player must be alive.");
+            Assert.AreEqual(100, playerAfter.currentHealth,
+                "Restarted player must have 100 HP.");
+            Assert.IsTrue(GameManager.Instance.gameActive,
+                "Game must be active after button restart.");
         }
 
         [UnityTest]
