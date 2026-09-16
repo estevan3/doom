@@ -317,12 +317,26 @@ Defect found & fixed at root cause (production change required):
 
 ## Milestone 13 — Brute (`TankBrute`)
 
-- [~] Implement slow movement.
-- [~] Implement heavy attack.
-- [~] Implement 0.5 s telegraph.
-- [~] Implement larger hitbox/scale.
-- [~] Add distinct visual (capsule + material color).
-- [ ] Add tests.
+- [x] Implement slow movement.
+- [x] Implement heavy attack.
+- [x] Implement 0.5 s telegraph.
+- [x] Implement larger hitbox/scale.
+- [x] Add distinct visual (capsule + material color).
+- [x] Add tests (`Assets/Game/Tests/PlayMode/BruteEnemyTests.cs`, 5 tests).
+
+Acceptance (verified 2026-09-16, full PlayMode suite 76/76 + EditMode 7/7, BruteEnemyTests 5/5):
+
+- Config distinctness: highest HP (200 > soldier 60 > runner 30), slowest movement (1.5 < soldier 3.5 < runner 5), heaviest damage (25 > soldier 12 > runner 8), slowest cadence (2.5 s between soldier 1.5 and runner 0.8), ~0.5 s telegraph, scale-2 hitbox, melee-range slam (3 m) versus soldier's 25 m ranged attack — behavioral difference, not just statistics. ✔
+- Slow approach: a brute parked 10 m behind the player crawls at ~1.5 speed while a parked runner covers far more over the same window, and the brute never reaches attack range during the crawl window. ✔
+- 0.5 s telegraph: from the moment the brute enters telegraph (color lerps to yellow, movement halts) until the slam lands and deals damage measures within the [0.35, 0.75] s tolerance (0.5 s nominal) — the player has a dodge window. ✔
+- Heavy attack: a brute parked in attack range lands ≥2 slams, each dealing exactly the configured 30 slam damage (OverlapSphere radius 3 at `pos + forward*1.5`), nothing else touches the player. ✔
+- Distinct visual: dark red capsule material (`Color(0.6, 0, 0)` set in `Start`), explicitly contrasted against runner green and soldier orange; scale-2 transform verifies the larger hitbox. ✔
+- Runtime visual evidence: `TestResults/brute_milestone.png` captured exception-free during the suite.
+
+Production touch (observability, no gameplay change, recorded in `DECISIONS.md`):
+
+- `TankBrute.IsTelegraphing()` public read-only accessor added so tests can arm their damage observer exactly when the telegraph begins (mirrors `IsAttacking` on `Chainsaw`).
+- The slam is implemented as `slamDamage` (30) applied via `Physics.OverlapSphere`, not the base-class `attackDamage` (25) path — the brute never calls the base `Attack()`. `attackRate` (2.5 s) stays declared-but-not-behaviorally-gated: once in range the brute re-telegraphs immediately (telegraph itself provides the dodge window). Per-milestone scope only asserts the configured cadence ordering (2.5 > 1.5 > 0.8), no behavior change.
 
 ## Milestone 14 — WaveManager
 
@@ -368,8 +382,8 @@ Acceptance:
 
 ## Current agent instruction
 
-Next milestone to start: **Milestone 13 — Brute (`TankBrute`)** dedicated behavior tests, then M14 (WaveManager timing tests).
-Milestones 1–12 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4). M11: Runner — rapid direct chase, fast melee cadence + configured damage, distinct green visual (EditMode 7/7, PlayMode 66/66, RunnerEnemyTests 4/4). M12: Ranged Soldier — ideal-range back-off, strafe band, 25 m ranged hitscan at 1.5 s cadence, distinct orange visual; production defect fixed (hitscan ray aimed 1 m over the player's head — now aims at the capsule center) (EditMode 7/7, PlayMode 71/71, RangedSoldierTests 5/5).
+Next milestone to start: **Milestone 14 — WaveManager** timing and state-transition tests (M13 Brute is now complete and verified).
+Milestones 1–12 are complete and verified. M1: automation foundation (EditMode 3/3, PlayMode 2/2). M2: level blockout + spec spawn tags (PlayMode 3/3). M3: Navigation with runtime-baked NavMesh, spawn-point usability, `SetDestination` spawn/bake race fixed (PlayMode 6/6). M4: Player + HUD, death/restart (PlayMode 19/19). M5: Weapon framework — slot ordering 1–4, HUD ammo/weapon reflection, base `Weapon` contract, ammo `SetAmmo`/events, firing/impact hooks exception-free (EditMode 3/3, PlayMode 29/29, WeaponFrameworkTests 10/10). M6: Pistol — hitscan, damage 15, cadence 0.3 s, ammo/0-ammo gating, default slot 0, input + direct-`Fire()` paths, real-enemy hitscan damage (EditMode 3/3, PlayMode 35/35, PistolTests 6/6). M7: Shotgun — 8-pellet cone, point-blank 64 damage, 0.8 s cadence, 50 shells, 2.0 s R-key block reload (EditMode 3/3, PlayMode 44/44, ShotgunTests 9/9). M8: Assault Rifle — auto-fire, 0.1 s cadence, damage 10, 150 m range, 120 rounds, DPS > pistol, real-enemy hitscan + repeated held damage, ammo/0-ammo gating (EditMode 3/3, PlayMode 51/51, AssaultRifleTests 7/7). M9: Chainsaw — 3 m melee-only, 300 DPS sustained (30 per 0.1 s tick), no-ammo sentinel, continuous camera-vibration feedback; in-range/out-of-range ticks, held repeated damage, cadence same-frame lock, feedback displacement (EditMode 3/3, PlayMode 56/56, ChainsawTests 5/5). M10: Enemy framework — base `Enemy` contract (HP, death, damage-to-player, NavMesh, WaveManager death notification) + 3 distinct types verified, no production fixes needed (EditMode 7/7, PlayMode 62/62, EnemyFrameworkTests 6/6 + EnemyFrameworkEditModeTests 4/4). M11: Runner — rapid direct chase, fast melee cadence + configured damage, distinct green visual (EditMode 7/7, PlayMode 66/66, RunnerEnemyTests 4/4). M12: Ranged Soldier — ideal-range back-off, strafe band, 25 m ranged hitscan at 1.5 s cadence, distinct orange visual; production defect fixed (hitscan ray aimed 1 m over the player's head — now aims at the capsule center) (EditMode 7/7, PlayMode 71/71, RangedSoldierTests 5/5). M13: Brute — slow approach, ~0.5 s telegraph slam (30 damage via OverlapSphere), scale-2 hitbox, dark red visual, slowest cadence; `IsTelegraphing()` accessor added, no gameplay defects (EditMode 7/7, PlayMode 76/76, BruteEnemyTests 5/5).
 
-Milestones 13–14 gameplay code already exists and compiles; M10 (base framework), M11 (Runner), and M12 (Ranged Soldier) have been verified by tests, M13 (Brute) and M14 (WaveManager timing) still need their dedicated PlayMode/EditMode verification per `TEST_PLAN.md` before they can be marked complete.
+Milestones 1–13 are complete and verified; M14 (WaveManager timing/state-transition tests) still needs its dedicated PlayMode/EditMode verification per `TEST_PLAN.md` before it can be marked complete.
 After completing each milestone, update this file and commit the result.

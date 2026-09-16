@@ -110,6 +110,8 @@ public class TankBrute : Enemy
         CreateSlamEffect();
     }
 
+    public bool IsTelegraphing() => isTelegraphing;
+
     void CreateSlamEffect()
     {
         GameObject slamEffect = GameObject.CreatePrimitive(PrimitiveType.Sphere);
