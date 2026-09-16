@@ -371,9 +371,9 @@ Test-infra robustness fix (M13 test, recorded in `DECISIONS.md`):
 
 ## Milestone 15 — Integration polish
 
+- [x] Validate all enemy/weapon combinations (added `CombatCrossProductTests`, 3/3, committed separately).
 - [~] Finish Game Over UI (code exists; button restart works per git history).
 - [~] Finish weapon HUD/ammo behavior.
-- [ ] Validate all enemy/weapon combinations.
 - [ ] Validate spawn points and NavMesh.
 - [ ] Run full EditMode suite (no tests exist yet).
 - [ ] Run full PlayMode suite (no tests exist yet).
@@ -381,6 +381,29 @@ Test-infra robustness fix (M13 test, recorded in `DECISIONS.md`):
 - [ ] Capture representative screenshots.
 - [ ] Fix remaining runtime errors (Blender import + graphicsApiMask console noise to clean up).
 - [ ] Balance damage/health/cadence.
+
+## Open issues (with deadline)
+
+### 2026-09-16 — CLI batchmode PlayMode runs cannot inject synthetic InputSystem input (deadline: 2026-09-23)
+
+**Status:** [OPEN] — not fixable within the current test helper design; documented per AGENTS.md reporting rules as an open issue with a deadline, NOT as a design decision.
+
+**Symptom:** 18 PlayMode tests fail deterministically in CLI `-batchmode -runTests` (all input-driven: Pistol/Shotgun/AssaultRifle/Chainsaw weapon tests, Player movement/sprint/jump, WeaponFramework holds/switches). They pass in GUI-editor runs (the primary M1–M14 verification path, full suite 81/81). `CombatCrossProductTests` and all non-input tests pass green in batch.
+
+**Root cause (verified by step-by-step diagnosis, 2026-09-16):**
+1. In batch, `Application.isFocused == false` the whole run. The Input System default `backgroundBehavior = ResetAndDisableNonBackgroundDevices` treats devices created while unfocused as "lost focus" → both the native `Keyboard` AND synthetic `TestKeyboard`/`TestMouse` are born `enabled=false`. Synthetic devices have `canRunInBackground=false`, so the native pass never re-enables them.
+2. Setting `InputSystem.settings.backgroundBehavior = IgnoreFocus` + `Application.runInBackground = true` in a `[UnitySetUp]` BEFORE `TestInputDevices.EnsureDevices()` keeps the synthetic devices `enabled=true` (verified), but does NOT fix the tests.
+3. The PlayerLoop never processes `InputSystem.QueueStateEvent` events in batch: after 1 and 2 frames the queued `W` press shows `w=False` (`updateMode=ProcessEventsInDynamicUpdate`, gameplay reads in `Update()` → modes match, yet events never arrive). Only an explicit `InputSystem.Update()` applies the state, and even then the InputActions read 0 (`moveAction=(0,0)` with `tk[W]=true`) and the device state is reset again on the next frame.
+4. Re-injecting every frame via `InputSystem.onUpdate` is rejected: queued events to a disabled device are discarded, and re-queuing each frame makes `WasReleasedThisFrame` and press→release sequences untestable (user decision 2026-09-16).
+
+**Conclusion:** synthetic-input injection is structurally impossible in this Unity/InputSystem/CLI combination with the current helper design. The 18 failing tests are pre-existing (confirmed via `git worktree` baseline at `9187cb3`: same 18 fail, no regression from M15). The M15 `RangedSoldier` flake observed in the combined 84-test run is load/timing and passes 5/5 in isolation (also passes in baseline) — not a regression.
+
+**Action items (due by deadline):**
+- Investigate an InputSystem-focus-compatible batch launch (e.g. `-enableNativePlatformBackendsForNewInputSystem`/Xvfb focus workaround) so the native focus-loss path is not triggered, then re-enable the 18 tests in `tools/test.sh` runs.
+- If un-fixable, keep the current split verification contract documented here: full PlayMode PlayMode input suite verified in GUI-editor runs; `tools/test.sh` CLI runs report the input set as known-failing and gate on the non-input subset.
+- Do NOT weaken/delete the 18 tests — they are correct and green in the GUI verification path.
+
+## Milestone 16 — Final playable build
 
 ## Milestone 16 — Final playable build
 
