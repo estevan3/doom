@@ -22,6 +22,16 @@ This file records consequential choices that are intentionally left open by `GAM
 
 ## Current decisions
 
+### 2026-09-16 — M15 balance locked with a deterministic EditMode guard test (no numeric rebalance)
+
+**Decision:** The "Balance damage/health/cadence" milestone item is completed by adding `WeaponBalanceEditModeTests` (6 tests, `Assets/Game/Tests/EditMode/`), which headless-instantiates every weapon and enemy, invokes each real `Awake` via reflection (EditMode does not auto-run it), and asserts the balance invariants: per-spec stat values; DPS tier ordering Pistol 50 < Shotgun 80 (point-blank) < Assault Rifle 100 < Chainsaw 300; ammo economy Pistol 999 > Rifle 120 > Shotgun 50 (>10× margin) and Chainsaw sentinel 0; range tiers Rifle 150 > Pistol 100 > Shotgun 30, with Chainsaw strictly melee (3 m); enemy HP/speed/damage/cadence tier ordering plus Soldier ranged vs Runner/Brute melee and Brute's 0.5 s telegraph; and TTK/survivability sanity (pistol drops a runner in <1 s, rifle kills the brute in <3 s, shotgun point-blank one-shots a runner but not the brute, no enemy one-shots the 100 HP player, pistol-vs-brute is a slow 4 s role-pressure fight). No production numbers were changed.
+
+**Reason:** The existing values were already pinned by M6–M13 weapon/enemy tests and verified playable through 17 milestones, so a blind rebalance would have broken 80+ already-green assertions to satisfy a subjective notion of "better". What M15 needed was a checkable contract that the numbers still describe the spec's intended roles (fallback, burst, sustained, melee peak; scarce vs generous ammo; escalating enemy tiers; survivable player). A deterministic EditMode lock makes any future rebalance a deliberate, test-verified act instead of silent drift.
+
+**Alternatives considered:** Hand-tuning numbers until "it feels right" (rejected — non-verifiable and would break existing pinned tests); a PlayMode TTK measurement against real enemies (rejected — frame-rate dependent at 1–8 FPS, and the config-level Ttk math is exactly deterministic); an EditMode test reading a static balance config class (rejected — there is no config class; weapon/enemy values live in `Awake`, and instantiating + invoking real `Awake` is the honest source of truth).
+
+**Impact:** EditMode suite is now 13/13 (7 existing + 6 balance). Any future change to weapon/enemy stats must keep DPS/ammo/range/enemy tiers and survivability coherent or this class fails with the exact violated invariant in the message. No gameplay change; balance was confirmed already coherent rather than modified.
+
 ### 2026-09-16 — Game Over restart button verified through the real production binding
 
 **Decision:** `PlayerTests` gains `Player_GameOverRestartButton_TriggersCleanRestart`, which calls `hud.ShowGameOver(3)`, locates the live `RestartButton` GameObject by name, and invokes its `Button.onClick` — the exact binding production `CreateButton` registered (`GameManager.RestartGame`). It asserts a new Player, 100 HP, not dead, `gameActive`. Supporting change: `Unity.ugui` added to `DoomClone.PlayModeTests.asmdef` so the test can reference `UnityEngine.UI.Button`.
