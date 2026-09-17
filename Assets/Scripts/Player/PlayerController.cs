@@ -126,6 +126,7 @@ public class PlayerController : MonoBehaviour
         currentHealth -= damage;
         currentHealth = Mathf.Max(0, currentHealth);
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        Debug.Log($"[Player] Dano recebido {damage} - HP {currentHealth}/{maxHealth}");
 
         if (currentHealth <= 0)
         {
@@ -158,6 +159,7 @@ public class PlayerController : MonoBehaviour
         isDead = true;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+        Debug.Log("[Player] Jogador morreu - Game Over");
         OnPlayerDeath?.Invoke();
     }
 

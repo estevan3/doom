@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -21,6 +22,23 @@ public class MainMenu : MonoBehaviour
         Cursor.visible = true;
         EnsureEventSystem();
         CreateUI();
+        Debug.Log("[MainMenu] UI criado");
+        if (HasArg("-automationAutoStart"))
+        {
+            Debug.Log("[MainMenu] Automacao: auto-start do nivel");
+            StartCoroutine(AutoStart());
+        }
+    }
+
+    static bool HasArg(string flag)
+    {
+        return System.Array.Exists(System.Environment.GetCommandLineArgs(), a => a == flag);
+    }
+
+    IEnumerator AutoStart()
+    {
+        yield return null;
+        StartGame();
     }
 
     Font LoadFont()
@@ -262,6 +280,7 @@ public class MainMenu : MonoBehaviour
 
     void StartGame()
     {
+        Debug.Log("[MainMenu] INICIAR clicado - carregando " + LevelSceneName);
         SceneManager.LoadScene(LevelSceneName);
     }
 }

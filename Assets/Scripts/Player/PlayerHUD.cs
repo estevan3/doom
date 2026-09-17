@@ -265,6 +265,7 @@ public class PlayerHUD : MonoBehaviour
 
     public void ShowGameOver(int wavesSurvived)
     {
+        Debug.Log($"[HUD] Game Over exibido - hordas sobrevividas: {wavesSurvived}");
         if (gameOverBg != null) gameOverBg.SetActive(true);
         if (gameOverText != null) gameOverText.gameObject.SetActive(true);
         if (restartButton != null) restartButton.SetActive(true);

@@ -31,6 +31,8 @@ public class NavMeshSetup : MonoBehaviour
 
         surface.collectObjects = CollectObjects.All;
         surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+        Debug.Log("[NavMeshSetup] Bake iniciado");
         surface.BuildNavMesh();
+        Debug.Log("[NavMeshSetup] Bake concluido - triangulos=" + (NavMeshUtil.IsBaked() ? NavMesh.CalculateTriangulation().vertices.Length : 0));
     }
 }

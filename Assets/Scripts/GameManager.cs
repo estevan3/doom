@@ -41,6 +41,7 @@ public class GameManager : MonoBehaviour
 
         SetupPlayer();
         SetupGame();
+        Debug.Log("[GameManager] Nivel iniciado - gameActive=" + gameActive);
     }
 
     void SetupPlayer()
@@ -77,6 +78,7 @@ public class GameManager : MonoBehaviour
 
     public void RestartGame()
     {
+        Debug.Log("[GameManager] Reiniciando nivel - " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
         UnityEngine.SceneManagement.SceneManager.LoadScene(
             UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }

@@ -121,6 +121,7 @@ public class WaveManager : MonoBehaviour
     IEnumerator StartFirstWave()
     {
         yield return new WaitForSeconds(initialDelay);
+        Debug.Log("[WaveManager] Delay inicial de " + initialDelay + "s concluido - iniciando Horda 1");
         StartNextWave();
     }
 
@@ -130,6 +131,7 @@ public class WaveManager : MonoBehaviour
 
         currentWave++;
         waveInProgress = true;
+        Debug.Log($"[WaveManager] Horda {currentWave} iniciada - spawn em progresso");
 
         if (hud != null)
         {
@@ -163,6 +165,7 @@ public class WaveManager : MonoBehaviour
             zombies++;
             total++;
         }
+        Debug.Log($"[WaveManager] Horda {currentWave}: {zombies} runner, {soldiers} soldier, {brutes} brute (total {total})");
 
         for (int i = 0; i < zombies; i++)
         {
@@ -339,6 +342,7 @@ public class WaveManager : MonoBehaviour
         enemiesAlive--;
         activeEnemies.Remove(enemy);
         enemy.OnEnemyDeath -= OnEnemyDeath;
+        Debug.Log($"[WaveManager] Inimigo morto - restantes {enemiesAlive}");
 
         if (enemiesAlive <= 0 && waveInProgress)
         {
@@ -351,6 +355,7 @@ public class WaveManager : MonoBehaviour
     {
         if (!gameActive) yield break;
 
+        Debug.Log($"[WaveManager] Horda {currentWave} concluida - cooldown de {cooldownBetweenWaves}s");
         int countdown = (int)cooldownBetweenWaves;
 
         for (int i = countdown; i > 0; i--)
@@ -375,6 +380,7 @@ public class WaveManager : MonoBehaviour
         gameActive = false;
         waveInProgress = false;
         StopAllCoroutines();
+        Debug.Log("[WaveManager] Jogador morreu - loop de hordas parado (gameActive=false)");
 
         if (hud != null)
         {
@@ -383,6 +389,8 @@ public class WaveManager : MonoBehaviour
             hud.HideCountdown();
             hud.ShowGameOver(currentWave);
         }
+
+        StartCoroutine(AutoRestartOnDeath());
 
         foreach (Enemy enemy in activeEnemies)
         {
@@ -393,6 +401,16 @@ public class WaveManager : MonoBehaviour
                 if (agent != null) agent.enabled = false;
             }
         }
+    }
+
+    IEnumerator AutoRestartOnDeath()
+    {
+        if (!System.Array.Exists(System.Environment.GetCommandLineArgs(), a => a == "-automationAutoRestart"))
+            yield break;
+        Debug.Log("[WaveManager] Automacao: reiniciando nivel em 5s");
+        yield return new WaitForSecondsRealtime(5f);
+        Debug.Log("[WaveManager] Automacao: restart por comando");
+        GameManager.Instance.RestartGame();
     }
 
     public int GetCurrentWave() => currentWave;

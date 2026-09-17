@@ -387,3 +387,43 @@ Ray ray = new Ray(origin, direction);
 **Alternatives considered:** Measuring after `yield return null` extra frames (rejected — frame-rate dependent, exactly the flake mechanism); comparing `transform.localScale` only (rejected — the spec requires a LARGER hitbox, not just a scaled model).
 
 **Impact:** The hitbox comparison is deterministic regardless of how many fixed steps the scheduler ran between spawn and measurement. No production change; brute collider remains scale-2 (world height 4.0). BruteEnemyTests 5/5 in isolation and in the full 81/81 suite.
+
+### 2026-09-17 — M16 production log instrumentation (PT-BR markers)
+
+**Decision:** Added additive `Debug.Log` markers to the menu and level flow with PT-BR text consistent with the HUD: `[MainMenu] UI criado`, `[MainMenu] INICIAR clicado ...`, `[GameManager] Nivel iniciado ...`, `[GameManager] Reiniciando nivel - <scene>`, `[NavMeshSetup] Bake iniciado/concluido - triangulos=N`, `[WaveManager] Horda N: x runner, y soldier, z brute (total t)`, `[WaveManager] Inimigo morto - restantes n`, `[WaveManager] Horda N concluida - cooldown de 5s`, `[WaveManager] Jogador morreu - loop de hordas parado`, `[Player] Dano recebido x - HP a/b`, `[Player] Jogador morreu - Game Over`, `[HUD] Game Over exibido - hordas sobrevividas: N`. No gameplay logic was touched (verified by `git diff`).
+
+**Reason:** This Xwayland environment cannot deliver OS pointer motion to XTEST clients (see the input decision below) and cannot provide DRI3 scanout to capture tools, so neither synthetic clicks/keystrokes nor screenshots can prove a running build. Event-driven log markers fired by the real production systems are the only reliable external observability for the standalone player — the M16 headless smoke (\`/tmp/doom_smoke/m16_e2e_player.log\`) is self-proving via exactly this marker chain.
+
+**Alternatives considered:** Pixel/OCR UI inspection (impossible — stale DRI3 captures); keeping the smoke evidence purely CLI-side like \`Application.logMessageReceived\` re-hooks (rejected — markers in production code are simpler, dual-use for any future logging needs, and identical to how the PlayMode suites already observe state).
+
+**Impact:** Roughly one log line per gameplay event (death, wave, damage, level load) — negligible allocation relative to per-frame hot paths; nothing is logged per-frame except the existing damage path, which was already mirroring the HUD event. Confirms exactly when each spec-required transition happens in the built player; no test depends on these markers.
+
+### 2026-09-17 — CLI automation flags `-automationAutoStart` / `-automationAutoRestart`
+
+**Decision:** `MainMenu` accepts `-automationAutoStart` to call its real `StartGame()` one frame after boot; `WaveManager.OnPlayerDeath` starts a coroutine that, only when `-automationAutoRestart` is present, waits 5 s (`WaitForSecondsRealtime`) and calls the real `GameManager.RestartGame()`. Without the flags both paths are inert (`yield break` / no-op) — zero behavior change in normal play and in the PlayMode tests (which run in the editor without these flags).
+
+**Reason:** External input injection into the built player is structurally impossible on this Xwayland (XTEST fake_input does not move the OS pointer; verified by pointer-query before/after, and Unity's window consistently reports a frozen mouse at (969,−37) while the game runs normally). To still prove the full loop — including Game Over → restart — in the standalone build, the build needs a deterministic, flag-gated driver path. The flags call the same production methods a human click would (StartGame / RestartGame), so the E2E evidence is genuine gameplay, not a test-only shortcut.
+
+**Alternatives considered:** Shipping a scripted smoke scene or an automation "driver mode" (rejected — flag-gated hooks into the real paths are smaller and cannot be triggered accidentally); Xdotool-style equivalents (rejected — not installed and the XTEST limitation is underlying, not tool-specific); controller injection (rejected — no physical gamepad and the Input System path has the same focus problem).
+
+**Impact:** `m16_e2e.sh` runs the built player headless with both flags and the full boot→wave→damage→death→GameOver→restart→wave loop is proven end-to-end. The flags are visible to the user as documented CLI switches; they do not appear in the GUI menu or any test path.
+
+### 2026-09-17 — Xwayland input/capture limitations (why the build is verified by log markers, not clicks/screenshots)
+
+**Decision:** Accepted that this host cannot inject input into or capture pixels from the game via X: (1) \`XTEST fake_input\` motion events do not move the OS pointer (\`XQueryPointer\` unchanged before/after) and so synthetic clicks cannot reach any window; (2) \`_NET_ACTIVE_WINDOW\` and \`XSetInputFocus\` do not change \`Application.isFocused\` in the Unity Editor either; (3) KWin on Xwayland with NVIDIA DRI3 does not deliver scanout to composition-aware capture tools (spectacle/imagemagick both return stale static frames). Verified empirically during M16 debugging. Documented as an environment constraint, not a game defect.
+
+**Reason:** Per AGENTS.md, the milestone must close with runtime evidence; chasing impossible input/pixel paths was consuming effort with zero progress. The replacement evidence (log-marker chain + CLI automation flags) is deterministic, repeatable, and proves strictly more state transitions than a screenshot could.
+
+**Alternatives considered:** Installing xte/xdotool/pyautogui (rejected — the XTEST backend is the broken layer, tool choice is irrelevant); Wayland-native injection tools (rejected — same underlying Xwayland compositor and no such tools are present); seeking a physical interaction (out of scope for an autonomous run).
+
+**Impact:** Any future headless verification on this machine must use the log-marker/CLI-flag path for the built player and MCP `tests-run` for the editor; screenshots remain useful only inside the editor (e.g. `GameTestAPI.Screenshot` writes TestResults PNGs during PlayMode).
+
+### 2026-09-17 — Corrected CPU-reader for the game process
+
+**Decision:** `/proc/PID/stat` for the Unity player is parsed with Python by splitting on the LAST \`)\` before reading fields 12/13 (\`f[11]\`/`f[12]` in 0-based), because the comm field \`(Unity Main Thre)\` contains spaces and the naive \`awk '$14+$15'\` sums wrong columns. Measured: game ≈ 208 ticks/s ≈ 200% CPU in BOTH menu and level — the process was never frozen, contradicting an earlier erroneous probe.
+
+**Reason:** A mistaken CPU reading during M16 diagnostics briefly suggested the menu "froze" while it actually ran at full speed; the corrected reader matches the observable game behavior and the double-core usage of a busy Unity player.
+
+**Alternatives considered:** Reading Ticks different syscalls from \`/proc\` or \`perf\` (overkill); trusting the first awk number (the error this corrects).
+
+**Impact:** Subsequent M16 analysis trusted the corrected metric; recorded to avoid regression to the bogus awk form in future diagnostics.
